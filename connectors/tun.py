@@ -24,8 +24,9 @@ class TunConsumer(BaseConsumer):
     def __init__(self, user, password, session, server, name, consumer_name):
         super(TunConsumer, self).__init__(user, password, session, server, name, consumer_name)
         self.dispatcher = {
-            "start": self.handle_start,
+            "tun.start": self.handle_start,
         }
+
 
     def handle_start(self, msg):
         """
@@ -42,20 +43,25 @@ class TunConsumer(BaseConsumer):
 
         example:
         {
-            "_type": "start",
+            "_type": "tun.start",
             "ipv6_host": ":2",
             "ipv6_prefix": "cccc"
         }
 
         - stop_tun
         """
-
-        ipv6_host = msg.get("ipv6_host", None)
-        ipv6_prefix = msg.get("ipv6_prefix", None)
-        ipv4_host = msg.get("ipv4_host", None)
-        ipv4_network = msg.get("ipv4_network", None)
-        ipv4_netmask = msg.get("ipv4_netmask", None)
-
+        logging.info('starting tun interface')
+        try:
+            ipv6_host = msg.get("ipv6_host", None)
+            ipv6_prefix = msg.get("ipv6_prefix", None)
+            ipv4_host = msg.get("ipv4_host", None)
+            ipv4_network = msg.get("ipv4_network", None)
+            ipv4_netmask = msg.get("ipv4_netmask", None)
+        except AttributeError as ae:
+            logging.error(
+                    'Wrong message format: {0}'.format(msg.payload)
+            )
+            return
 
 
         params = {
@@ -73,25 +79,44 @@ class TunConsumer(BaseConsumer):
             sys.exit(1)
 
         elif sys.platform.startswith('linux'):
+            logging.info('Starting open tun [linux]')
             self.tun = OpenTunLinux(**params)
 
         elif sys.platform.startswith('darwin'):
+            logging.info('Starting open tun [darwin]')
             self.tun = OpenTunMACOS(**params)
         else:
             log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
             sys.exit(1)
 
 
+    def handle_data(self, body, message):
+        """
+
+        Args:
+            msg:
+
+        Returns:
+
+        """
+        self.log.debug("HANDLE DATA from tun")
+        self.log.debug(("Payload", message.payload))
+        self.log.debug(("Properties", message.properties))
+        self.log.debug(("Headers", message.headers))
+        self.log.debug(("body", message.body))
 
     def handle_control(self, body, message):
         msg = None
         try:
+            # body is a json
             msg = json.loads(body)
             log.debug(message)
-        except ValueError as e:
+            if msg["_type"]:
+                log.debug('HANDLE CONTROL from tun processing event type: {0}'.format(msg["_type"]))
+        except (ValueError,KeyError) as e:
             message.ack()
             log.error(e)
-            log.error("Incorrect message: {0}".format(body))
+            log.error("Incorrect message: {0}".format(message.payload))
             return
         if msg["_type"] in self.dispatcher.keys():
             self.dispatcher[msg["_type"]](msg)

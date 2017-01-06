@@ -11,6 +11,7 @@ import sys
 
 from kombu import Exchange
 
+# TODO rename _v6ToMesh_notif -> _backendToIut
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
 logging.basicConfig(level=logging.DEBUG)
@@ -441,19 +442,19 @@ class OpenTunLinux(object):
             log.info("opening tun interface")
             returnVal = os.open("/dev/net/tun", os.O_RDWR)
             ifs = ioctl(returnVal, TUNSETIFF, struct.pack("16sH", "tun%d", IFF_TUN))
-            ifname = ifs[:16].strip("\x00")
+            self.ifname = ifs[:16].strip("\x00")
 
             # =====
             log.info("configuring IPv6 address...")
             # ipv6_prefixStr = formatIPv6Addr(self.ipv6_prefix)
             # ipv6_hostStr = formatIPv6Addr(self.ipv6_host)
 
-            v = os.system('ip tuntap add dev ' + ifname + ' mode tun user root')
-            v = os.system('ip link set ' + ifname + ' up')
-            v = os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + ifname)
-            v = os.system('ip -6 addr add fe80:' + self.ipv6_host + '/64 dev ' + ifname)
+            v = os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root')
+            v = os.system('ip link set ' + self.ifname + ' up')
+            v = os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + self.ifname)
+            v = os.system('ip -6 addr add fe80:' + self.ipv6_host + '/64 dev ' + self.ifname)
 
-            # v = os.system("ip addr add " + self.ipv4_host + "/24 dev " + ifname)
+            # v = os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname)
 
             # =====
             log.info("adding static route route...")
@@ -462,8 +463,8 @@ class OpenTunLinux(object):
 
             # TODO: fix hard-coded value
 
-            # os.system('ip -6 route add ' + ipv6_prefixStr + ':1415:9200::/96 dev ' + ifname + ' metric 1')
-            os.system('ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + ifname + ' metric 1')
+            # os.system('ip -6 route add ' + ipv6_prefixStr + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
+            os.system('ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
             # trying to set a gateway for this route
             # os.system('ip -6 route add ' + ipv6_prefixStr + '::/64 via ' + IPv6Prefix + ':' + ipv6_hostStr + '/64')
 
@@ -473,7 +474,7 @@ class OpenTunLinux(object):
 
             # =====
             log.info('\ncreated following virtual interface:')
-            os.system('ip addr show ' + ifname)
+            os.system('ip addr show ' + self.ifname)
 
             # =====start radvd
             # os.system('radvd start')
@@ -502,7 +503,7 @@ class OpenTunLinux(object):
         This function forwards the data to the the EventBus.
         Read from 6lowPAN and forward to tun interface
         """
-        routing_key = "data.fromAgent.{name}".format(name=self.name)
+        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = json.dumps({
@@ -529,6 +530,7 @@ class OpenTunMACOS(object):
         log.info("create instance")
 
         self.name = name
+        self.tun_name = ''
 
         if ipv6_prefix is None:
             # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -621,8 +623,8 @@ class OpenTunMACOS(object):
         while tun_counter<16:
             try:
                 import os
-                ifname='tun{0}'.format(tun_counter)
-                f=os.open("/dev/{0}".format(ifname), os.O_RDWR)
+                self.ifname='tun{0}'.format(tun_counter)
+                f=os.open("/dev/{0}".format(self.ifname), os.O_RDWR)
                 break
             except OSError:
                 tun_counter+=1
@@ -630,24 +632,25 @@ class OpenTunMACOS(object):
         if tun_counter==16:
             raise OSError('TUN device not found: check if it exists or if it is busy. TunTap driver installed on MacOs?')
         else:
+
         #=====
             log.info("configuring IPv6 address...")
             # prefixStr = u.formatIPv6Addr(openTun.IPV6PREFIX)
             # hostStr   = u.formatIPv6Addr(openTun.IPV6HOST)
 
-            # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(ifname, self.prefixStr, hostStr))
-            # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(ifname, hostStr))
+            # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.prefixStr, hostStr))
+            # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, hostStr))
 
-            v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(ifname, self.ipv6_prefix, self.ipv6_host))
-            v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(ifname, self.ipv6_host))
+            v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
+            v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
 
 
         #=====
             log.info("adding static route route...")
             # added 'metric 1' for router-compatibility constraint
             # (show ping packet on wireshark but don't send to mote at all)
-            # os.system('ip -6 route add ' + prefixStr + ':1415:9200::/96 dev ' + ifname + ' metric 1')
-            os.system('route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_host, ifname))
+            # os.system('ip -6 route add ' + prefixStr + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
+            os.system('route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_host, self.ifname))
             # trying to set a gateway for this route
             #os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
 
@@ -658,10 +661,11 @@ class OpenTunMACOS(object):
 
         #=====
             print('\ncreated following virtual interface:')
-            os.system('ifconfig {0}'.format(ifname))
+            os.system('ifconfig {0}'.format(self.ifname))
 
         #=====start radvd
             #os.system('radvd start')
+
 
             return f
 
@@ -681,7 +685,7 @@ class OpenTunMACOS(object):
 
         This function forwards the data to the the EventBus.
         """
-        routing_key = "data.fromAgent.{name}".format(name=self.name)
+        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = json.dumps({
