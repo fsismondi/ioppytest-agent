@@ -11,7 +11,6 @@ import sys
 
 from kombu import Exchange
 
-# TODO rename _v6ToMesh_notif -> _backendToIut
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
 logging.basicConfig(level=logging.DEBUG)
@@ -402,12 +401,11 @@ class OpenTunLinux(object):
     def _getNetworkPrefix_notif(self, sender, signal, data):
         return self.ipv6_prefix
 
-    def _v6ToInternet_notif(self, sender, signal, data):
+    def _eventBusToTun(self, sender, signal, data):
         """
         Called when receiving data from the EventBus.
 
         This function forwards the data to the the TUN interface.
-        Read from tun interface and forward to 6lowPAN
         """
 
         # abort if not tun interface
@@ -493,10 +491,10 @@ class OpenTunLinux(object):
         """
         return TunReadThread(
             self.tunIf,
-            self._v6ToMesh_notif
+            self._tunToEventBus
         )
 
-    def _v6ToMesh_notif(self, data):
+    def _tunToEventBus(self, data):
         """
         Called when receiving data from the TUN interface.
 
@@ -506,15 +504,16 @@ class OpenTunLinux(object):
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
-        msg = json.dumps({
+        msg = {
             "_type": "packet.raw",
             "interface_name": self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
             "routing_key": routing_key,
             "data": data
-        })
-        log.debug(msg)
+        }
+        log.debug(json.dumps(msg))
+        # do not re-encode on json, producer does serialization
         self.producer.publish(msg,
                               exchange=self.exchange,
                               routing_key=routing_key)
@@ -586,7 +585,7 @@ class OpenTunMACOS(object):
     def _getNetworkPrefix_notif(self, sender, signal, data):
         return self.ipv6_prefix
 
-    def _v6ToInternet_notif(self, sender, signal, data):
+    def _eventBusToTun(self, sender, signal, data):
         """
         Called when receiving data from the EventBus.
 
@@ -620,6 +619,10 @@ class OpenTunMACOS(object):
             read/write operations.
         '''
         #=====
+        import random
+        random_time = 1 + (random.randint(0, 1000) / 1000)
+        log.debug('waiting {rt} before starting the tun'.format(rt=random_time))
+        time.sleep(random_time)
         log.info("opening tun interface")
         tun_counter=0
         while tun_counter<16:
@@ -632,7 +635,9 @@ class OpenTunMACOS(object):
                 tun_counter+=1
 
         if tun_counter==16:
-            raise OSError('TUN device not found: check if it exists or if it is busy. TunTap driver installed on MacOs?')
+            raise OSError('TUN device not found: check if it exists or if it is busy.'
+                          ' TunTap driver installed on MacOs?'
+                          ' Running as root?')
         else:
 
         #=====
@@ -643,16 +648,28 @@ class OpenTunMACOS(object):
             # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.prefixStr, hostStr))
             # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, hostStr))
 
-            v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
+            #delete starting ":"
+            self.ipv6_host = self.ipv6_host.replace(":", "")
+
+            v=os.system('ifconfig {0} inet6 {1}::{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
             v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
 
 
         #=====
             log.info("adding static route route...")
+            #next line is openwsn stuff
+            #log.info('route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_host, self.ifname))
+
+            routing_table_cmd1 = 'route add -inet6 bbbb::1 -interface tun0'.format(self.ipv6_host, self.ifname)
+            routing_table_cmd2 = 'route add -inet6 bbbb::2 -interface tun1'.format(self.ipv6_host, self.ifname)
+            #routing_table_cmd = 'route add -inet6 bbbb::2 -interface {1}'.format(self.ipv6_host, self.ifname)
+            log.info(routing_table_cmd1)
+            log.info(routing_table_cmd2)
             # added 'metric 1' for router-compatibility constraint
             # (show ping packet on wireshark but don't send to mote at all)
             # os.system('ip -6 route add ' + prefixStr + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
-            os.system('route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_host, self.ifname))
+            os.system(routing_table_cmd1)
+            os.system(routing_table_cmd2)
             # trying to set a gateway for this route
             #os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
 
@@ -678,10 +695,10 @@ class OpenTunMACOS(object):
         '''
         return TunReadThread(
             self.tunIf,
-            self._v6ToMesh_notif
+            self._tunToEventBus
         )
 
-    def _v6ToMesh_notif(self, data):
+    def _tunToEventBus(self, data):
         """
         Called when receiving data from the TUN interface.
 
@@ -690,15 +707,16 @@ class OpenTunMACOS(object):
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
-        msg = json.dumps({
+        msg = {
             "_type": "packet.raw",
-            "interface_name":self.ifname,
+            "interface_name": self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
             "routing_key": routing_key,
             "data": data
-        })
-        log.debug(msg)
+        }
+        log.debug(json.dumps(msg))
+        # do not re-encode on json, producer does serialization
         self.producer.publish(msg,
                               exchange=self.exchange,
                               routing_key=routing_key)
