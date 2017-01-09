@@ -13,8 +13,6 @@ from utils.opentun import OpenTunLinux, OpenTunMACOS
 
 __version__ = (0, 0, 1)
 
-log = logging.getLogger(__name__)
-
 
 class TunConsumer(BaseConsumer):
     """
@@ -50,7 +48,7 @@ class TunConsumer(BaseConsumer):
 
         - stop_tun
         """
-        logging.info('starting tun interface')
+        self.log.info('starting tun interface')
         try:
             ipv6_host = msg.get("ipv6_host", None)
             ipv6_prefix = msg.get("ipv6_prefix", None)
@@ -58,7 +56,7 @@ class TunConsumer(BaseConsumer):
             ipv4_network = msg.get("ipv4_network", None)
             ipv4_netmask = msg.get("ipv4_netmask", None)
         except AttributeError as ae:
-            logging.error(
+            self.log.error(
                     'Wrong message format: {0}'.format(msg.payload)
             )
             return
@@ -75,18 +73,18 @@ class TunConsumer(BaseConsumer):
         }
 
         if sys.platform.startswith('win32'):
-            log.error('Agent TunTap not yet supported for windows')
+            self.log.error('Agent TunTap not yet supported for windows')
             sys.exit(1)
 
         elif sys.platform.startswith('linux'):
-            logging.info('Starting open tun [linux]')
+            self.log.info('Starting open tun [linux]')
             self.tun = OpenTunLinux(**params)
 
         elif sys.platform.startswith('darwin'):
-            logging.info('Starting open tun [darwin]')
+            self.log.info('Starting open tun [darwin]')
             self.tun = OpenTunMACOS(**params)
         else:
-            log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
+            self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
             sys.exit(1)
 
 
@@ -99,29 +97,39 @@ class TunConsumer(BaseConsumer):
         Returns:
 
         """
-        self.log.debug("HANDLE DATA from tun")
+        self.log.debug("HANDLE DATA")
         self.log.debug(("Payload", message.payload))
         self.log.debug(("Properties", message.properties))
         self.log.debug(("Headers", message.headers))
-        self.log.debug(("body", message.body))
+        #self.log.debug(("body", message.body))
+        self.log.debug(("Body", body))
+        self.log.debug(("type", type(body)))
+        assert isinstance(body,dict)
+        # body is already a dict, no need to json.load it
+        msg = body
+        if msg["_type"] == 'packet.raw': #and  not '.fromAgent' in message.delivery_info['routing_key']:
+            self.log.debug("Message was routed, therefore we can inject it on our tun")
+            self.tun._eventBusToTun(sender="F-Interop server",
+                                         signal="f-interop to agent",
+                                         data=msg["data"])
 
     def handle_control(self, body, message):
         msg = None
         try:
             # body is a json
             msg = json.loads(body)
-            log.debug(message)
+            self.log.debug(message)
             if msg["_type"]:
-                log.debug('HANDLE CONTROL from tun processing event type: {0}'.format(msg["_type"]))
+                self.log.debug('HANDLE CONTROL from tun processing event type: {0}'.format(msg["_type"]))
         except (ValueError,KeyError) as e:
             message.ack()
-            log.error(e)
-            log.error("Incorrect message: {0}".format(message.payload))
+            self.log.error(e)
+            self.log.error("Incorrect message: {0}".format(message.payload))
             return
         if msg["_type"] in self.dispatcher.keys():
             self.dispatcher[msg["_type"]](msg)
         else:
-            log.debug("Not supported action")
+            self.log.debug("Not supported action")
 
 
 # elif "data" in msg.keys():
