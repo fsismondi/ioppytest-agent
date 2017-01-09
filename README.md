@@ -9,6 +9,11 @@ The design of the f-interop agent is modular by design.
 An agent is made of different processes that connect and exchange messages to each others
 using ZMQ sockets.
 
+Note well
+----
+Agent is only supported by python2 -> tun librarires py2 only
+
+
 Core
 ----
 
