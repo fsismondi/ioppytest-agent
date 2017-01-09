@@ -114,7 +114,7 @@ class MyTest(ConsumerMixin):
         # These lines do the routing between the two
         if msg["routing_key"] == "data.fromAgent.client":
             log.debug("Message was routed, therefore we can inject it on our tun")
-            self.tun._v6ToInternet_notif(sender="test",
+            self.tun._eventBusToTun(sender="test",
                                          signal="tun",
                                          data=msg["data"])
         else:
