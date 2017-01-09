@@ -507,6 +507,8 @@ class OpenTunLinux(object):
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = json.dumps({
+            "_type": "packet.raw",
+            "interface_name": self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
             "routing_key": routing_key,
@@ -689,6 +691,8 @@ class OpenTunMACOS(object):
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = json.dumps({
+            "_type": "packet.raw",
+            "interface_name":self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
             "routing_key": routing_key,
