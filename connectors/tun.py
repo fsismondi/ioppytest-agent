@@ -115,6 +115,7 @@ class TunConsumer(BaseConsumer):
         self.log.debug(("Headers", message.headers))
         #self.log.debug(("body", message.body))
         self.log.debug(("Body", body))
+        self.log.debug(("Message type (_type field)", body["_type"]))
         self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
         # body is already a dict, no need to json.load it

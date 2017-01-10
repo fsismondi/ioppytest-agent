@@ -503,6 +503,7 @@ class OpenTunLinux(object):
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
+        # TODO move timestamp.msg id  and roiuting key, add them as headers , not payload
         msg = {
             "_type": "packet.sniffed.raw",
             "interface_name": self.ifname,
@@ -706,6 +707,7 @@ class OpenTunMACOS(object):
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
+        # TODO move timestamp.msg id  and roiuting key, add them as headers , not payload
         msg = {
             "_type": "packet.sniffed.raw",
             "interface_name": self.ifname,
