@@ -413,7 +413,7 @@ class OpenTunLinux(object):
             return
 
         # add tun header
-        data = VIRTUALTUNID + data
+        #data = VIRTUALTUNID + data
 
         # convert data to string
         data = ''.join([chr(b) for b in data])
@@ -499,13 +499,12 @@ class OpenTunLinux(object):
         Called when receiving data from the TUN interface.
 
         This function forwards the data to the the EventBus.
-        Read from 6lowPAN and forward to tun interface
         """
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = {
-            "_type": "packet.raw",
+            "_type": "packet.sniffed.raw",
             "interface_name": self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
@@ -708,7 +707,7 @@ class OpenTunMACOS(object):
         log.debug("This is my routing key: %s" % routing_key)
         # dispatch to EventBus
         msg = {
-            "_type": "packet.raw",
+            "_type": "packet.sniffed.raw",
             "interface_name": self.ifname,
             "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),

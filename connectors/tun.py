@@ -115,11 +115,11 @@ class TunConsumer(BaseConsumer):
         self.log.debug(("Headers", message.headers))
         #self.log.debug(("body", message.body))
         self.log.debug(("Body", body))
-        self.log.debug('* * * * * * * * * * * * * * * * * * * * * * * * *')
+        self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
         # body is already a dict, no need to json.load it
         msg = body
-        if msg["_type"] == 'packet.raw': #and  not '.fromAgent' in message.delivery_info['routing_key']:
+        if msg["_type"] == 'packet.to_inject.raw': #and  not '.fromAgent' in message.delivery_info['routing_key']:
             self.log.debug("Message was routed, therefore we can inject it on our tun")
             self.tun._eventBusToTun(
                     sender="F-Interop server",

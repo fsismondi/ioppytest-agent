@@ -1,3 +1,5 @@
 click
 kombu
 pika
+zmq
+pyserial
