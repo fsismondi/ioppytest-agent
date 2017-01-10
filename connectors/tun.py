@@ -4,6 +4,7 @@
 import json
 import logging
 import sys
+import datetime
 
 from kombu import Connection
 from kombu import Queue
@@ -24,6 +25,8 @@ class TunConsumer(BaseConsumer):
         self.dispatcher = {
             "tun.start": self.handle_start,
         }
+        self.tun = None
+        self.packet_count = 0
 
 
     def handle_start(self, msg):
@@ -97,21 +100,32 @@ class TunConsumer(BaseConsumer):
         Returns:
 
         """
-        self.log.debug("HANDLE DATA")
+
+        if self.tun is None:
+            self.log.error("Cannot handle data packet, no tun interface yet configured")
+            return
+
+        self.packet_count += 1
+
+        self.log.debug('\n* * * * * * HANDLE DATA (%s) * * * * * * *'%self.packet_count)
+        self.log.debug("TIME: %s"%datetime.datetime.time(datetime.datetime.now()))
+        self.log.debug(" - - - ")
         self.log.debug(("Payload", message.payload))
         self.log.debug(("Properties", message.properties))
         self.log.debug(("Headers", message.headers))
         #self.log.debug(("body", message.body))
         self.log.debug(("Body", body))
-        self.log.debug(("type", type(body)))
-        assert isinstance(body,dict)
+        self.log.debug('* * * * * * * * * * * * * * * * * * * * * * * * *')
+
         # body is already a dict, no need to json.load it
         msg = body
         if msg["_type"] == 'packet.raw': #and  not '.fromAgent' in message.delivery_info['routing_key']:
             self.log.debug("Message was routed, therefore we can inject it on our tun")
-            self.tun._eventBusToTun(sender="F-Interop server",
-                                         signal="f-interop to agent",
-                                         data=msg["data"])
+            self.tun._eventBusToTun(
+                    sender="F-Interop server",
+                    signal="tun inject",
+                    data=msg["data"]
+            )
 
     def handle_control(self, body, message):
         msg = None
