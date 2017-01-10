@@ -268,6 +268,10 @@ class TunReadThread(threading.Thread):
         # give this thread a name
         self.name = 'TunReadThread'
 
+        # check if running on MacOs, in this situation tuntap driver doesnt put the 4extra bytes
+        # tested with brew install Caskroom/cask/tuntap
+        self.tunTapHeader = not sys.platform.startswith('darwin')
+
         # start myself
         self.start()
 
@@ -287,11 +291,13 @@ class TunReadThread(threading.Thread):
                 log.debug('packet captured on tun interface: {0}'.format(formatBuf(p)))
 
                 # remove tun ID octets
-                p = p[4:]
+                if self.tunTapHeader:
+                    p = p[4:]
 
                 # make sure it's an IPv6 packet (i.e., starts with 0x6x)
                 if (p[0] & 0xf0) != 0x60:
                     log.info('this is not an IPv6 packet')
+                    log.debug('first bytes: {0}'.format(formatBuf(p[:2])))
                     continue
 
                 # because of the nature of tun for Windows, p contains ETHERNET_MTU
