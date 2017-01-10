@@ -1,4 +1,6 @@
-﻿import json
+﻿# -*- coding: utf-8 -*-
+
+import json
 import logging
 import os
 import struct
@@ -283,10 +285,9 @@ class TunReadThread(threading.Thread):
 
                 # debug info
                 log.debug('packet captured on tun interface: {0}'.format(formatBuf(p)))
-                log.debug('packet captured on tun interface: {0}'.format(formatBuf(p)))
 
                 # remove tun ID octets
-                #p = p[4:]
+                p = p[4:]
 
                 # make sure it's an IPv6 packet (i.e., starts with 0x6x)
                 if (p[0] & 0xf0) != 0x60:
@@ -413,7 +414,7 @@ class OpenTunLinux(object):
             return
 
         # add tun header
-        #data = VIRTUALTUNID + data
+        data = VIRTUALTUNID + data
 
         # convert data to string
         data = ''.join([chr(b) for b in data])
@@ -512,7 +513,12 @@ class OpenTunLinux(object):
             "routing_key": routing_key,
             "data": data
         }
-        log.debug(json.dumps(msg))
+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
+                 '\n data packet TUN -> EventBus' +
+                 '\n' + json.dumps(msg) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
         # do not re-encode on json, producer does serialization
         self.producer.publish(msg,
                               exchange=self.exchange,
@@ -541,7 +547,7 @@ class OpenTunMACOS(object):
 
         if ipv6_host is None:
             # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-            ipv6_host = ":1"
+            ipv6_host = "1"
 
         self.ipv6_host = ipv6_host
 
@@ -597,10 +603,27 @@ class OpenTunMACOS(object):
             return
 
         # add tun header
-        data = VIRTUALTUNID + data
+        #data = VIRTUALTUNID + data
 
+        # import binascii
+        # stri = ""
+        # for i in data:
+        #     if type(i)==int:
+        #         #stri += str(i)
+        #         stri += binascii.hexlify(str(i))
+        #     else:
+        #         #stri += i.decode('utf-8')
+        #         stri += binascii.hexlify(i.decode('utf-8'))
+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
+                 '\n data packet EventBus -> TUN' +
+                 '\n' + json.dumps(data) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
         # convert data to string
         data = ''.join([chr(b) for b in data])
+
+
 
         try:
             # write over tuntap interface
@@ -619,10 +642,13 @@ class OpenTunMACOS(object):
             read/write operations.
         '''
         #=====
-        import random
-        random_time = 1 + (random.randint(0, 1000) / 1000)
-        log.debug('waiting {rt} before starting the tun'.format(rt=random_time))
-        time.sleep(random_time)
+
+        # import random
+        # TODO test concurrency problems with MacOs drivers when launching two agents in same PC
+        #random_time = 1 + (random.randint(0, 1000) / 1000)
+        #log.debug('waiting {rt} before starting the tun'.format(rt=random_time))
+        #time.sleep(random_time)
+
         log.info("opening tun interface")
         tun_counter=0
         while tun_counter<16:
@@ -657,19 +683,13 @@ class OpenTunMACOS(object):
 
         #=====
             log.info("adding static route route...")
-            #next line is openwsn stuff
-            #log.info('route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_host, self.ifname))
-
-            routing_table_cmd1 = 'route add -inet6 bbbb::1 -interface tun0'.format(self.ipv6_host, self.ifname)
-            routing_table_cmd2 = 'route add -inet6 bbbb::2 -interface tun1'.format(self.ipv6_host, self.ifname)
-            #routing_table_cmd = 'route add -inet6 bbbb::2 -interface {1}'.format(self.ipv6_host, self.ifname)
-            log.info(routing_table_cmd1)
-            log.info(routing_table_cmd2)
             # added 'metric 1' for router-compatibility constraint
             # (show ping packet on wireshark but don't send to mote at all)
-            # os.system('ip -6 route add ' + prefixStr + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
-            os.system(routing_table_cmd1)
-            os.system(routing_table_cmd2)
+
+            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname)
+            log.info("trying with:" + static_route)
+            os.system(static_route)
+
             # trying to set a gateway for this route
             #os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
 
@@ -716,7 +736,11 @@ class OpenTunMACOS(object):
             "routing_key": routing_key,
             "data": data
         }
-        log.debug(json.dumps(msg))
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
+                 '\n data packet TUN -> EventBus' +
+                 '\n' + json.dumps(msg) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
         # do not re-encode on json, producer does serialization
         self.producer.publish(msg,
                               exchange=self.exchange,
