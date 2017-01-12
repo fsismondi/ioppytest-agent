@@ -53,45 +53,47 @@ class TunConsumer(BaseConsumer):
 
         - stop_tun
         """
-        self.log.info('starting tun interface')
-        try:
-            ipv6_host = msg.get("ipv6_host", None)
-            ipv6_prefix = msg.get("ipv6_prefix", None)
-            ipv4_host = msg.get("ipv4_host", None)
-            ipv4_network = msg.get("ipv4_network", None)
-            ipv4_netmask = msg.get("ipv4_netmask", None)
-        except AttributeError as ae:
-            self.log.error(
-                    'Wrong message format: {0}'.format(msg.payload)
-            )
-            return
+        if self.tun is None:
+            self.log.info('starting tun interface')
+            try:
+                ipv6_host = msg.get("ipv6_host", None)
+                ipv6_prefix = msg.get("ipv6_prefix", None)
+                ipv4_host = msg.get("ipv4_host", None)
+                ipv4_network = msg.get("ipv4_network", None)
+                ipv4_netmask = msg.get("ipv4_netmask", None)
+            except AttributeError as ae:
+                self.log.error(
+                        'Wrong message format: {0}'.format(msg.payload)
+                )
+                return
 
 
-        params = {
-            'rmq_connection' : self.connection,
-            'name' : self.name,
-            'ipv6_host' : ipv6_host,
-            'ipv6_prefix' : ipv6_prefix,
-            'ipv4_host' : ipv4_host,
-            'ipv4_network' : ipv4_network,
-            'ipv4_netmask' : ipv4_netmask,
-        }
+            params = {
+                'rmq_connection' : self.connection,
+                'name' : self.name,
+                'ipv6_host' : ipv6_host,
+                'ipv6_prefix' : ipv6_prefix,
+                'ipv4_host' : ipv4_host,
+                'ipv4_network' : ipv4_network,
+                'ipv4_netmask' : ipv4_netmask,
+            }
 
-        if sys.platform.startswith('win32'):
-            self.log.error('Agent TunTap not yet supported for windows')
-            sys.exit(1)
+            if sys.platform.startswith('win32'):
+                self.log.error('Agent TunTap not yet supported for windows')
+                sys.exit(1)
 
-        elif sys.platform.startswith('linux'):
-            self.log.info('Starting open tun [linux]')
-            self.tun = OpenTunLinux(**params)
+            elif sys.platform.startswith('linux'):
+                self.log.info('Starting open tun [linux]')
+                self.tun = OpenTunLinux(**params)
 
-        elif sys.platform.startswith('darwin'):
-            self.log.info('Starting open tun [darwin]')
-            self.tun = OpenTunMACOS(**params)
+            elif sys.platform.startswith('darwin'):
+                self.log.info('Starting open tun [darwin]')
+                self.tun = OpenTunMACOS(**params)
+            else:
+                self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
+                sys.exit(1)
         else:
-            self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
-            sys.exit(1)
-
+            self.log.warning('Received open tun control message, but TUN already created')
 
     def handle_data(self, body, message):
         """
