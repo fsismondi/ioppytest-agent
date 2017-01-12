@@ -133,8 +133,7 @@ class TunConsumer(BaseConsumer):
     def handle_control(self, body, message):
         msg = None
         try:
-            # body is a json
-            msg = json.loads(body)
+            msg = body
             self.log.debug(message)
             if msg["_type"]:
                 self.log.debug('HANDLE CONTROL from tun processing event type: {0}'.format(msg["_type"]))
