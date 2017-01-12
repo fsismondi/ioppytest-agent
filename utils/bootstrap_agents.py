@@ -3,7 +3,7 @@ import os
 import json
 import pika
 
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.WARNING)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 queue_name = 'unittest_packet_router'
 
 # rewrite default values with ENV variables
@@ -14,6 +14,7 @@ AMQP_VHOST = str(os.environ['AMQP_VHOST'])
 AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
 
 print('Env vars for AMQP connection succesfully imported')
+
 print(json.dumps(
         {
             'server': AMQP_SERVER,
@@ -53,5 +54,11 @@ channel.basic_publish(exchange='default',
 d["ipv6_host"] = ":2"
 channel.basic_publish(exchange='default',
                        routing_key='control.tun.toAgent.agent2',
+                       mandatory=True,
+                       body=json.dumps(d))
+
+d["ipv6_host"] = ":3"
+channel.basic_publish(exchange='default',
+                       routing_key='control.tun.toAgent.agent_TT',
                        mandatory=True,
                        body=json.dumps(d))
