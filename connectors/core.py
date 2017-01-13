@@ -3,6 +3,7 @@ Plugin to connect to the F-interop backend
 """
 import json
 import logging
+from kombu import Producer
 
 from .base import BaseController, BaseConsumer
 
@@ -39,6 +40,18 @@ class CoreConsumer(BaseConsumer):
         log.info("Go to this URL: http://{platform}/session/{session}".format(platform=self.server_url,
                                                                               session=self.session))
         log.info("-------------------------------------------------")
+
+
+        #  let's send bootstrap message
+        msg = {
+            'message': '{component} is up!'.format(component=self.name),
+            "_type": '{component}.ready'.format(component=self.name)
+        }
+        producer = Producer(connection,serializer='json')
+        producer.publish(msg,
+                        exchange=self.exchange,
+                        routing_key='control.session.bootstrap'
+                        )
 
     def handle_control(self, body, message):
         log.debug("DEFAULT HANDLE CONTROL")
