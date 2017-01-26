@@ -46,19 +46,35 @@ d = {
 
 logging.debug("Let's start the bootstrap the agents")
 
-channel.basic_publish(exchange='default',
-                       routing_key='control.tun.toAgent.agent1',
-                       mandatory=True,
-                       body=json.dumps(d))
+channel.basic_publish(
+        exchange=AMQP_EXCHANGE,
+        routing_key='control.tun.toAgent.agent1',
+        mandatory=True,
+        properties=pika.BasicProperties(
+            content_type='application/json',
+        ),
+        body=json.dumps(d)
+)
 
 d["ipv6_host"] = ":2"
-channel.basic_publish(exchange='default',
-                       routing_key='control.tun.toAgent.agent2',
-                       mandatory=True,
-                       body=json.dumps(d))
+channel.basic_publish(
+        exchange=AMQP_EXCHANGE,
+        routing_key='control.tun.toAgent.agent2',
+        mandatory=True,
+        properties=pika.BasicProperties(
+                content_type='application/json',
+        ),
+        body=json.dumps(d)
+)
 
 d["ipv6_host"] = ":3"
-channel.basic_publish(exchange='default',
-                       routing_key='control.tun.toAgent.agent_TT',
-                       mandatory=True,
-                       body=json.dumps(d))
+channel.basic_publish(
+        exchange=AMQP_EXCHANGE,
+        routing_key='control.tun.toAgent.agent_TT',
+        mandatory=True,
+        properties=pika.BasicProperties(
+            content_type='application/json',
+        ),
+        body=json.dumps(d)
+)
+
