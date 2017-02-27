@@ -3,3 +3,4 @@ kombu
 pika
 zmq
 pyserial
+requests
