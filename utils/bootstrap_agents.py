@@ -14,6 +14,7 @@ AMQP_VHOST = str(os.environ['AMQP_VHOST'])
 AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
 
 # TODO wait for session bootsrap message and get agents names from there?
+
 AGENT_1_ID = 'coap_client_agent'
 AGENT_2_ID = 'coap_server_agent'
 AGENT_TT_ID = 'agent_TT'
