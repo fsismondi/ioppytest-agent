@@ -74,10 +74,11 @@ For more information, visit: http://f-interop.paris.inria.fr.
             short_help=Agent.header
         )
 
-        self.session_url = click.Argument(
+        self.session_url = click.Option(
+            param_decls=["--url"],
+            default= "amqp://guest:guest@localhost/#agent",
             required=True,
-            help=Agent.header
-        )
+            help="")
 
         # Commands
 
@@ -94,13 +95,13 @@ For more information, visit: http://f-interop.paris.inria.fr.
 
         self.plugins = {}
 
-    def handle_connect(self, session_url):
+    def handle_connect(self, url):
         """
         Authenticate USER and create agent connection to f-interop.
 
         """
 
-        p = urlparse(session_url)
+        p = urlparse(url)
         data = {
             "user": p.username,
             "password": p.password,
