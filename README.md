@@ -20,7 +20,7 @@ cause we need to open a virtual interface to tunnel the packets.
 The command for executing it will be provided to you by F-Interop web
 GUI,it should look something like this:
 ```
-sudo python -m agent connect amqp://pgul:iamthewalrus@f-interop.rennes.inria.fr/session55 --name coap_client_agent
+sudo python -m agent connect  --url amqp://pgul:iamthewalrus@f-interop.rennes.inria.fr/session55 --name coap_client_agent
 ```
 for more info 
 ```
