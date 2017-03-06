@@ -13,6 +13,12 @@ AMQP_PASS = str(os.environ['AMQP_PASS'])
 AMQP_VHOST = str(os.environ['AMQP_VHOST'])
 AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
 
+# TODO wait for session bootsrap message and get agents names from there?
+
+AGENT_1_ID = 'coap_client_agent'
+AGENT_2_ID = 'coap_server_agent'
+AGENT_TT_ID = 'agent_TT'
+
 print('Env vars for AMQP connection succesfully imported')
 
 print(json.dumps(
@@ -48,7 +54,7 @@ logging.debug("Let's start the bootstrap the agents")
 
 channel.basic_publish(
         exchange=AMQP_EXCHANGE,
-        routing_key='control.tun.toAgent.agent1',
+        routing_key='control.tun.toAgent.%s'%AGENT_1_ID,
         mandatory=True,
         properties=pika.BasicProperties(
             content_type='application/json',
@@ -59,7 +65,7 @@ channel.basic_publish(
 d["ipv6_host"] = ":2"
 channel.basic_publish(
         exchange=AMQP_EXCHANGE,
-        routing_key='control.tun.toAgent.agent2',
+        routing_key='control.tun.toAgent.%s'%AGENT_2_ID,
         mandatory=True,
         properties=pika.BasicProperties(
                 content_type='application/json',
@@ -70,7 +76,7 @@ channel.basic_publish(
 d["ipv6_host"] = ":3"
 channel.basic_publish(
         exchange=AMQP_EXCHANGE,
-        routing_key='control.tun.toAgent.agent_TT',
+        routing_key='control.tun.toAgent.%s'%AGENT_TT_ID,
         mandatory=True,
         properties=pika.BasicProperties(
             content_type='application/json',

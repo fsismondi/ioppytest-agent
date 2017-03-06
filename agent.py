@@ -1,5 +1,6 @@
 # coding: utf-8
 
+
 """
 Agent for f-interop
 *******************
@@ -26,9 +27,8 @@ instruction. All the commands send from the agent are for debugging and developi
 by default in the final version.
 """
 import logging
-import uuid
-
 import click
+import uuid
 
 from connectors.tun import TunConnector
 from connectors.core import CoreConnector
@@ -36,6 +36,11 @@ from connectors.http import HTTPConnector
 from connectors.ping import PingConnector
 from connectors.zeromq import ZMQConnector
 from connectors.serialconn import SerialConnector
+
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 
 __version__ = (0, 0, 1)
 
@@ -54,45 +59,32 @@ class Agent(object):
     header = """
 F-interop agent and management tool.
 
+Please use the following format to connect to the f-interop server:
+
+sudo python -m agent connect --url amqp://f_interop_user:f_interop_password@f_interop_server/session_id --name agent_name
+
+with user/generated password + session_id
+
 For more information, visit: http://f-interop.paris.inria.fr.
 """,
 
     def __init__(self):
+
         self.cli = click.Group(
             add_help_option=Agent.header,
             short_help=Agent.header
         )
 
-        # Options
-
-        self.server_option = click.Option(
-            param_decls=["--server"],
-            default=DEFAULT_PLATFORM,
+        self.session_url = click.Option(
+            param_decls=["--url"],
+            default= "amqp://guest:guest@localhost/session_id",
             required=True,
-            help="f-interop platform (default: %s)" % DEFAULT_PLATFORM)
-
-        self.user_option = click.Option(
-            param_decls=["--user"],
-            required=True,
-            help="F-interop username."
-        )
-
-        self.password_option = click.Option(
-            param_decls=["--password"],
-            required=True,
-            help="F-interop password.",
-            hide_input=True)
-
-        self.session_option = click.Option(
-            param_decls=["--session"],
-            required=True,
-            help="F-interop session id."
-        )
+            help="")
 
         self.name_option = click.Option(
             param_decls=["--name"],
             default=str(uuid.uuid1()),
-            required=True,
+            required=False,
             help="Agent identity (default: random generated)")
 
         # Commands
@@ -100,29 +92,30 @@ For more information, visit: http://f-interop.paris.inria.fr.
         self.connect_command = click.Command(
             "connect",
             callback=self.handle_connect,
-            params=[self.user_option,
-                    self.password_option,
-                    self.session_option,
-                    self.server_option,
-                    self.name_option],
-            short_help="Authenticate user")
+            params=[
+                self.session_url,
+                self.name_option,
+                    ],
+            short_help="Authenticate user"
+        )
 
         self.cli.add_command(self.connect_command)
 
         self.plugins = {}
 
-    def handle_connect(self, user, password, session, server, name):
+    def handle_connect(self, url, name):
         """
-        Authenticate a USER with an f-interop.
+        Authenticate USER and create agent connection to f-interop.
 
-        This create a file/token that is reused to access the f-interop platform.
         """
+
+        p = urlparse(url)
         data = {
-            "user": user,
-            "password": password,
-            "session": session,
-            "server": server,
-            "name": name
+            "user": p.username,
+            "password": p.password,
+            "session": p.path.strip('/'),
+            "server": p.hostname,
+            "name": name,
         }
         log.info("Try to connect with %s" % data)
 

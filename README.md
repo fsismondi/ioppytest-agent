@@ -13,7 +13,20 @@ Note well
 ----
 Agent is only supported by python2 -> tun librarires py2 only
 
-
+Running the agent
+-----------------
+For running the agent you will need privileges on the machine, basically
+cause we need to open a virtual interface to tunnel the packets.
+The command for executing it will be provided to you by F-Interop web
+GUI,it should look something like this:
+```
+sudo python -m agent connect amqp://pgul:iamthewalrus@f-interop.rennes.inria.fr/session55 --name coap_client_agent
+```
+for more info 
+```
+python agent.py --help
+python agent.py connect --help
+```
 Core
 ----
 
