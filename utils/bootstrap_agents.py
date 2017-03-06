@@ -65,7 +65,7 @@ channel.basic_publish(
 d["ipv6_host"] = ":2"
 channel.basic_publish(
         exchange=AMQP_EXCHANGE,
-        routing_key='control.tun.toAgent.%s'%AGENT_1_ID,
+        routing_key='control.tun.toAgent.%s'%AGENT_2_ID,
         mandatory=True,
         properties=pika.BasicProperties(
                 content_type='application/json',
