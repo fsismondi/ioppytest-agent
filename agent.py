@@ -28,6 +28,7 @@ by default in the final version.
 """
 import logging
 import click
+import uuid
 
 from connectors.tun import TunConnector
 from connectors.core import CoreConnector
@@ -60,7 +61,7 @@ F-interop agent and management tool.
 
 Please use the following format to connect to the f-interop server:
 
-sudo python -m agent connect amqp://f_interop_user:f_interop_password@f_interop_server/session_id#agent_name
+sudo python -m agent connect --url amqp://f_interop_user:f_interop_password@f_interop_server/session_id --name agent_name
 
 with user/generated password + session_id
 
@@ -76,9 +77,15 @@ For more information, visit: http://f-interop.paris.inria.fr.
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default= "amqp://guest:guest@localhost/#agent",
+            default= "amqp://guest:guest@localhost/session_id",
             required=True,
             help="")
+
+        self.name_option = click.Option(
+            param_decls=["--name"],
+            default=str(uuid.uuid1()),
+            required=False,
+            help="Agent identity (default: random generated)")
 
         # Commands
 
@@ -87,6 +94,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
             callback=self.handle_connect,
             params=[
                 self.session_url,
+                self.name_option,
                     ],
             short_help="Authenticate user"
         )
@@ -95,7 +103,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
 
         self.plugins = {}
 
-    def handle_connect(self, url):
+    def handle_connect(self, url, name):
         """
         Authenticate USER and create agent connection to f-interop.
 
@@ -107,7 +115,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
             "password": p.password,
             "session": p.path.strip('/'),
             "server": p.hostname,
-            "name": p.fragment,
+            "name": name,
         }
         log.info("Try to connect with %s" % data)
 
