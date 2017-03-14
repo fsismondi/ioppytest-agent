@@ -6,10 +6,7 @@ import sys
 import logging
 import serial
 import os
-from kombu import Connection
-from kombu import Queue
 import collections
-# from finterop import AMQP_SERVER, AMQP_USER, AMQP_PASS, AMQP_VHOST, AMQP_EXCHANGE
 from subprocess import Popen, PIPE
 from .base import BaseController, BaseConsumer
 from threading import Thread
