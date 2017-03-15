@@ -8,7 +8,7 @@ import logging
 import sys
 import datetime
 
-from kombu import Connection
+from kombu import Connection, Producer
 from kombu import Queue
 
 from connectors.base import BaseController, BaseConsumer
@@ -92,6 +92,25 @@ class TunConsumer(BaseConsumer):
             else:
                 self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
                 sys.exit(1)
+
+            msg = {
+                "_type": "tun.started",
+                'name' : self.name,
+                'ipv6_host' : ipv6_host,
+                'ipv6_prefix' : ipv6_prefix,
+                'ipv4_host' : ipv4_host,
+                'ipv4_network' : ipv4_network,
+                'ipv4_netmask' : ipv4_netmask,
+            }
+            self.log.info("Tun started. Publishing msg: %s"%json.dumps(msg))
+
+            producer = Producer(self.connection, serializer='json')
+            producer.publish(
+                    msg,
+                    exchange=self.exchange,
+                    routing_key='control.tun.fromAgent.%s'%self.name
+            )
+
         else:
             self.log.warning('Received open tun control message, but TUN already created')
 

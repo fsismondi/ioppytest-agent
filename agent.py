@@ -63,8 +63,6 @@ Please use the following format to connect to the f-interop server:
 
 sudo python -m agent connect --url amqp://f_interop_user:f_interop_password@f_interop_server/session_id --name agent_name
 
-with user/generated password + session_id
-
 For more information, visit: http://f-interop.paris.inria.fr.
 """,
 
@@ -77,7 +75,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default= "amqp://guest:guest@localhost/session_id",
+            default= "amqp://guest:guest@localhost/default",
             required=True,
             help="")
 
