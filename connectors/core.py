@@ -44,13 +44,15 @@ class CoreConsumer(BaseConsumer):
 
         #  let's send bootstrap message
         msg = {
-            'message': '{component} is up!'.format(component=self.name),
-            "_type": '{component}.ready'.format(component=self.name)
+            '_type': 'testingtool.component.ready',
+            'component': self.name,
+            "message": "Component ready to start test suite."
         }
+
         producer = Producer(connection,serializer='json')
         producer.publish(msg,
                         exchange=self.exchange,
-                        routing_key='control.session.bootstrap'
+                        routing_key='control.session'
                         )
 
     def handle_control(self, body, message):
