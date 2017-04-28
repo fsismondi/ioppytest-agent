@@ -1,6 +1,6 @@
 import json
 import logging
-
+import os
 import pika
 import pytest
 
@@ -56,8 +56,16 @@ typedef enum {
 
 @pytest.fixture
 def producer():
+
+    try:
+        AMQP_URL = str(os.environ['AMQP_URL'])
+        AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
+    except:
+        AMQP_URL = 'amqp://guest:guest@localhost/'
+        AMQP_EXCHANGE = 'default'
+
     connection = pika.BlockingConnection(
-        pika.connection.URLParameters('amqp://paul:iamthewalrus@f-interop.rennes.inria.fr/session01'))
+        pika.connection.URLParameters(AMQP_URL))
     channel = connection.channel()
     channel.confirm_delivery()
     return channel
