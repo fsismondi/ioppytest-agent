@@ -49,7 +49,7 @@ LOGGER = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-
+logging.getLogger('amqp').setLevel(logging.INFO)
 
 class Agent(object):
     """
