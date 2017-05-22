@@ -49,7 +49,7 @@ LOGGER = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-
+logging.getLogger('amqp').setLevel(logging.INFO)
 
 class Agent(object):
     """
@@ -61,7 +61,8 @@ F-interop agent and management tool.
 
 Please use the following format to connect to the f-interop server:
 
-sudo python -m agent connect --url amqp://f_interop_user:f_interop_password@f_interop_server/session_id --name agent_name
+sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client_agent
+
 
 For more information, visit: http://f-interop.paris.inria.fr.
 """,

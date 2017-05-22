@@ -136,15 +136,16 @@ class TunConsumer(BaseConsumer):
         self.log.debug(("Payload", message.payload))
         self.log.debug(("Properties", message.properties))
         self.log.debug(("Headers", message.headers))
-        #self.log.debug(("body", message.body))
         self.log.debug(("Body", body))
         self.log.debug(("Message type (_type field)", body["_type"]))
         self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
         # body is already a dict, no need to json.load it
         msg = body
-        if msg["_type"] == 'packet.to_inject.raw': #and  not '.fromAgent' in message.delivery_info['routing_key']:
-            self.log.debug("Message was routed, therefore we can inject it on our tun")
+        if msg["_type"] == 'packet.to_inject.raw':
+            self.log.info("Message received from F-Interop. Injecting in Tun. Message count (downlink): %s"
+                          %self.packet_count)
+
             self.tun._eventBusToTun(
                     sender="F-Interop server",
                     signal="tun inject",
@@ -167,64 +168,6 @@ class TunConsumer(BaseConsumer):
             self.dispatcher[msg["_type"]](msg)
         else:
             self.log.debug("Not supported action")
-
-
-# elif "data" in msg.keys():
-# if msg["routing_key"] == "tun.pkt" and self.tun is None:
-#     log.warning("Received data packet but tun is not open. send a start_tun command")
-# if msg["routing_key"] == "tun.pkt" and self.tun is not None:
-#     self.tun._v6ToInternet_notif("sender", "signal", msg["data"])
-# else:
-#     log.info("Don't know how to handle those packets")
-
-# def handle_control(self, body, message):
-
-#     if msg is not None:
-#         # Prefer a narrow filter to avoid having
-#         sniffer_filter = "udp port 5683"
-
-#         interface_filter = "lo"  # Listening on the local loop only
-#         if "order" in msg.keys():
-#             if msg["order"] == "launchSniffer":
-#                 log.info("Start the sniffer")
-#                 # output_path = str(uuid.uuid1()) + ".pcap"
-#                 output_path = "output.pcap"
-#                 start_sniffing_cmd = ["tshark",
-#                                       "-i", interface_filter,
-#                                       "-w", output_path, # Path to the stored PCAP
-#                                       "-f", sniffer_filter, # sniffing filter
-#                 ]
-#                 p = subprocess.Popen(start_sniffing_cmd)
-#                 self.sniffer_process.add(p)
-#             elif msg["order"] == "finishSniffer":
-#                 log.info("Stop the sniffer")
-#                 for p in self.sniffer_process:
-#                     p.terminate()
-#             elif msg["order"] == "getPcap":
-#                 log.info("PCAP collection")
-#                 with open("output.pcap", "rb") as f:
-#                     ans = json.dumps({
-#                             "msg_id": str(uuid.uuid1()),
-#                             "src": "amqp://user_id@finterop.org/agent/agent_id",
-#                             "timestamp": "42",
-#                             "topic": "pkt.network",
-#                             "props": {
-#                                 "pkt": base64.b64encode(f.read()).decode()}
-#                         }
-#                     )
-#                     log.debug(ans)
-#                     self.producer.publish(ans,
-#                         exchange=self.exchange,
-#                         routing_key="pkt.network")
-#             else:
-#                 log.error("Unknown command")
-#         else:
-#             log.info("No order in the message")
-
-
-#         self.tun._v6ToInternet_notif(sender="test",
-#                                      signal="tun",
-#                                      data=msg["data"])
 
 
 class TunConnector(BaseController):
