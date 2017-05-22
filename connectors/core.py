@@ -36,10 +36,10 @@ class CoreConsumer(BaseConsumer):
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
         log.info("Backend ready to consume data")
-        log.info("-------------------------------------------------")
-        log.info("Go to this URL: http://{platform}/session/{session}".format(platform=self.server_url,
-                                                                              session=self.session))
-        log.info("-------------------------------------------------")
+        # log.info("-------------------------------------------------")
+        # log.info("Go to this URL: http://{platform}/session/{session}".format(platform=self.server_url,
+        #                                                                       session=self.session))
+        # log.info("-------------------------------------------------")
 
 
         #  let's send bootstrap message
