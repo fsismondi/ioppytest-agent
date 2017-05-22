@@ -328,8 +328,11 @@ class OpenTunLinux(object):
     def __init__(self, name, rmq_connection, exchange="default",
                  ipv6_prefix=None, ipv6_host=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
-        # log
-        log.info("create instance")
+
+        # RMQ setups
+        self.connection = rmq_connection
+        self.producer = self.connection.Producer(serializer='json')
+        self.exchange = Exchange(exchange, type="topic", durable=False)
 
         self.name = name
         self.packet_count = 0
@@ -372,12 +375,6 @@ class OpenTunLinux(object):
             self.tunReadThread = self._createTunReadThread()
         else:
             self.tunReadThread = None
-
-        # f-interop related part
-
-        self.connection = rmq_connection
-        self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
 
     # ======================== public ==========================================
 
@@ -545,8 +542,11 @@ class OpenTunMACOS(object):
     def __init__(self, name, rmq_connection, exchange="default",
                  ipv6_prefix=None, ipv6_host=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
-        # log
-        log.info("create instance")
+
+        # RMQ setups
+        self.connection = rmq_connection
+        self.producer = self.connection.Producer(serializer='json')
+        self.exchange = Exchange(exchange, type="topic", durable=False)
 
         self.name = name
         self.tun_name = ''
@@ -591,11 +591,7 @@ class OpenTunMACOS(object):
         else:
             self.tunReadThread = None
 
-        # f-interop related part
 
-        self.connection = rmq_connection
-        self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
 
     # ======================== public ==========================================
 
