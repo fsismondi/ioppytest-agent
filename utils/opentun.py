@@ -326,7 +326,7 @@ class OpenTunLinux(object):
     """
 
     def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None,
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
@@ -349,6 +349,10 @@ class OpenTunLinux(object):
 
         self.ipv6_host = ipv6_host
 
+        if ipv6_no_forwarding is None:
+            ipv6_no_forwarding = False
+        self.ipv6_no_forwarding = ipv6_no_forwarding
+
         if ipv4_host is None:
             ipv4_host = "2.2.2.2"
 
@@ -365,6 +369,7 @@ class OpenTunLinux(object):
         log.debug("IP info")
         log.debug(self.ipv6_prefix)
         log.debug(self.ipv6_host)
+        log.debug(self.ipv6_no_forwarding)
         log.debug(self.ipv4_host)
         log.debug(self.ipv4_network)
         log.debug(self.ipv4_netmask)
@@ -448,8 +453,13 @@ class OpenTunLinux(object):
             # os.system('ip -6 route add ' + ipv6_prefixStr + '::/64 via ' + IPv6Prefix + ':' + ipv6_hostStr + '/64')
 
             # =====
-            log.info("enabling IPv6 forwarding...")
-            os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
+
+            if self.ipv6_no_forwarding:
+                log.info("disabling IPv6 forwarding...")
+                os.system('echo 0 > /proc/sys/net/ipv6/conf/all/forwarding')
+            else:
+                log.info("enabling IPv6 forwarding...")
+                os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
 
             # =====
             log.info('\ncreated following virtual interface:')
@@ -540,7 +550,7 @@ class OpenTunMACOS(object):
     '''
 
     def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None,
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
@@ -555,18 +565,19 @@ class OpenTunMACOS(object):
         if ipv6_prefix is None:
             # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
             ipv6_prefix = DEFAULT_IPV6_PREFIX
-
         self.ipv6_prefix = ipv6_prefix
 
         if ipv6_host is None:
             # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
             ipv6_host = "1"
-
         self.ipv6_host = ipv6_host
+
+        if ipv6_no_forwarding is None:
+            ipv6_no_forwarding = False
+        self.ipv6_no_forwarding = ipv6_no_forwarding
 
         if ipv4_host is None:
             ipv4_host = "2.2.2.2"
-
         self.ipv4_host = ipv4_host
 
         if ipv4_network is None:
@@ -577,12 +588,14 @@ class OpenTunMACOS(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
+
         log.debug("IP info")
-        log.debug(self.ipv6_prefix)
-        log.debug(self.ipv6_host)
-        log.debug(self.ipv4_host)
-        log.debug(self.ipv4_network)
-        log.debug(self.ipv4_netmask)
+        log.debug('ipv6_prefix: ' + self.ipv6_prefix)
+        log.debug('ipv6_host: ' + self.ipv6_host)
+        log.debug('ipv6_no_forwarding: ' + str(self.ipv6_no_forwarding))
+        log.debug('ipv4_host: ' + self.ipv4_host)
+        log.debug('ipv4_network: ' + str(self.ipv4_network))
+        log.debug('ipv4_netmask: ' + str(self.ipv4_netmask))
 
         # local variables
         self.tunIf = self._createTunIf()
@@ -660,17 +673,19 @@ class OpenTunMACOS(object):
             # os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
 
             # =====
-            log.info("enabling IPv6 forwarding...")
-            # os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
-            os.system('sysctl -w net.inet6.ip6.forwarding=1')
+            if self.ipv6_no_forwarding:
+                log.info("disabling IPv6 forwarding...")
+                os.system('sysctl -w net.inet6.ip6.forwarding=0')
+            else:
+                log.info("enabling IPv6 forwarding...")
+                os.system('sysctl -w net.inet6.ip6.forwarding=1')
 
             # =====
-            print('\ncreated following virtual interface:')
+            log.info('\ncreated following virtual interface:')
             os.system('ifconfig {0}'.format(self.ifname))
 
             # =====start radvd
             # os.system('radvd start')
-
 
             return f
 
