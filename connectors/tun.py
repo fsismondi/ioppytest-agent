@@ -53,20 +53,24 @@ class TunConsumer(BaseConsumer):
 
         - stop_tun
         """
-        if self.tun is None:
+        if self.tun is not None:
+            self.log.warning('Received open tun control message, but TUN already created')
+            return
+        else:
             self.log.info('starting tun interface')
             try:
                 ipv6_host = msg.get("ipv6_host", None)
                 ipv6_prefix = msg.get("ipv6_prefix", None)
+                ipv6_no_forwarding = msg.get("ipv6_no_forwarding", None)
                 ipv4_host = msg.get("ipv4_host", None)
                 ipv4_network = msg.get("ipv4_network", None)
                 ipv4_netmask = msg.get("ipv4_netmask", None)
+
             except AttributeError as ae:
                 self.log.error(
                         'Wrong message format: {0}'.format(msg.payload)
                 )
                 return
-
 
             params = {
                 'rmq_connection' : self.connection,
@@ -76,6 +80,7 @@ class TunConsumer(BaseConsumer):
                 'ipv4_host' : ipv4_host,
                 'ipv4_network' : ipv4_network,
                 'ipv4_netmask' : ipv4_netmask,
+                'ipv6_no_forwarding' : ipv6_no_forwarding
             }
 
             if sys.platform.startswith('win32'):
@@ -101,6 +106,7 @@ class TunConsumer(BaseConsumer):
                 'ipv4_host' : ipv4_host,
                 'ipv4_network' : ipv4_network,
                 'ipv4_netmask' : ipv4_netmask,
+                'ipv6_no_forwarding' : ipv6_no_forwarding,
             }
             self.log.info("Tun started. Publishing msg: %s"%json.dumps(msg))
 
@@ -111,8 +117,7 @@ class TunConsumer(BaseConsumer):
                     routing_key='control.tun.fromAgent.%s'%self.name
             )
 
-        else:
-            self.log.warning('Received open tun control message, but TUN already created')
+
 
     def handle_data(self, body, message):
         """
