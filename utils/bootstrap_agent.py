@@ -57,7 +57,7 @@ if __name__ == "__main__":
         parser.add_argument("-nf", "--no_forwarding", help="activate or not IPv6 forwarding", action="store_true")
         args = parser.parse_args()
 
-        agent_id = args.name
+        agent_id = args.agent_name
         ipv6_prefix = args.ipv6_prefix
         ipv6_host = args.ipv6_host
         ipv6_no_forwarding = args.no_forwarding
