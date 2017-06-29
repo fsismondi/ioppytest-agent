@@ -10,9 +10,8 @@ logging.getLogger('pika').setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 queue_name = 'unittest_packet_router'
 
+
 def publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding=False):
-
-
     d = {
         "_type": "tun.start",
         "name": agent_id,
@@ -64,8 +63,7 @@ def check_response(channel, queue_name, agent_id):
     return False
 
 
-def bootstrap(AMQP_URL , AMQP_EXCHANGE, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding):
-
+def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding):
     connection = pika.BlockingConnection(pika.connection.URLParameters(AMQP_URL))
     channel = connection.channel()
     agent_event_q = 'agent_bootstrap'
@@ -86,12 +84,10 @@ def bootstrap(AMQP_URL , AMQP_EXCHANGE, agent_id, ipv6_host, ipv6_prefix, ipv6_n
         if check_response(channel, agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
             publish_tun_bootrap_success(channel, agent_id)
-            sys.exit(0)
         elif i < 3:
             pass
         else:
             logging.error("Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
-            sys.exit(1)
 
 
 if __name__ == "__main__":
