@@ -33,6 +33,24 @@ def publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forward
             body=json.dumps(d)
     )
 
+def publish_tun_bootrap_success(channel, agent_id):
+    d = {
+        "_type": "agent.configured",
+        "description": "Event agent successfully CONFIGURED",
+        "name": agent_id,
+    }
+
+    channel.basic_publish(
+            exchange=AMQP_EXCHANGE,
+            routing_key='control.session',
+            mandatory=True,
+            properties=pika.BasicProperties(
+                    content_type='application/json',
+            ),
+            body=json.dumps(d)
+    )
+
+
 def check_response(channel,queue_name, agent_id):
     method, header, body = channel.basic_get(queue=queue_name)
     if body is not None:
@@ -86,6 +104,7 @@ if __name__ == "__main__":
         time.sleep(4)
         if check_response(channel,agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
+            publish_tun_bootrap_success(channel, agent_id)
             sys.exit(0)
         elif i < 3:
             pass
