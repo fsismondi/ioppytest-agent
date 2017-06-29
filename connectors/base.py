@@ -10,7 +10,6 @@ from kombu import Exchange
 from kombu import Queue
 from kombu.mixins import ConsumerMixin
 
-
 DEFAULT_EXCHANGE_NAME = "default"
 
 
@@ -38,9 +37,9 @@ class BaseConsumer(ConsumerMixin):
         self.name = name
         self.consumer_name = consumer_name
         self.server_url = 'amqp://{user}:{password}@{server}/{session}'.format(user=user,
-                                                                               password=password,
-                                                                               session=session,
-                                                                               server=server)
+                                                                                      password=password,
+                                                                                      session=session,
+                                                                                      server=server)
         self.connection = Connection(self.server_url,
                                      transport_options={'confirm_publish': True})
 
@@ -51,15 +50,16 @@ class BaseConsumer(ConsumerMixin):
         self.control_queue = Queue("control.{consumer_name}@{name}".format(name=name,
                                                                            consumer_name=consumer_name),
                                    exchange=self.exchange,
-                                   routing_key='control.{consumer_name}.#.{name}'.format(consumer_name=consumer_name,
-                                                                                         name=name),
+                                   routing_key='control.{consumer_name}.toAgent.{name}'.format(
+                                       consumer_name=consumer_name,
+                                       name=name),
                                    durable=False)
 
         self.data_queue = Queue("data.{consumer_name}@{name}".format(name=name,
                                                                      consumer_name=consumer_name),
                                 exchange=self.exchange,
-                                routing_key='data.{consumer_name}.#.{name}'.format(consumer_name=consumer_name,
-                                                                                   name=name),
+                                routing_key='data.{consumer_name}.toAgent.{name}'.format(consumer_name=consumer_name,
+                                                                                         name=name),
                                 durable=False)
 
     def get_consumers(self, Consumer, channel):
@@ -75,7 +75,19 @@ class BaseConsumer(ConsumerMixin):
         ]
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
-        self.log.info("{consumer_name} ready to consume data. Typical routing key: control.{consumer_name}@{name}".format(consumer_name=self.consumer_name, name=self.name))
+        # control plane info
+        self.log.info(
+            "{consumer_name} listening to control plane. "
+            "Queue (consumer): control.{consumer_name}@{name} . "
+            "Topic (binding): control.{consumer_name}.toAgent.{name}"
+                .format(consumer_name=self.consumer_name, name=self.name))
+
+        # data plane info
+        self.log.info(
+            "{consumer_name} listening to data plane. "
+            "Queue (consumer): data.{consumer_name}@{name} . "
+            "Topic (binding): data.{consumer_name}.toAgent.{name}"
+                .format(consumer_name=self.consumer_name, name=self.name))
 
     def handle_control(self, body, message):
         self.log.debug("DEFAULT HANDLE CONTROL")

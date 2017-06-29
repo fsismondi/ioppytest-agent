@@ -49,6 +49,7 @@ LOGGER = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+logging.getLogger('amqp').setLevel(logging.INFO)
 
 
 class Agent(object):
@@ -61,9 +62,9 @@ F-interop agent and management tool.
 
 Please use the following format to connect to the f-interop server:
 
-sudo python -m agent connect --url amqp://f_interop_user:f_interop_password@f_interop_server/session_id --name agent_name
+sudo python -m agent connect  --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX --name coap_client_agent
 
-For more information, visit: http://f-interop.paris.inria.fr.
+For more information, visit: http://doc.f-interop.eu
 """,
 
     def __init__(self):
@@ -75,7 +76,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default= "amqp://guest:guest@localhost/default",
+            default="amqp://guest:guest@localhost/default",
             required=True,
             help="")
 
@@ -93,7 +94,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
             params=[
                 self.session_url,
                 self.name_option,
-                    ],
+            ],
             short_help="Authenticate user"
         )
 
@@ -115,6 +116,10 @@ For more information, visit: http://f-interop.paris.inria.fr.
             "server": p.hostname,
             "name": name,
         }
+
+        if p.port:
+            data.update({"server": "{}:{}".format(p.hostname, p.port)})
+
         log.info("Try to connect with %s" % data)
 
         self.plugins["core"] = CoreConnector(**data)
@@ -130,20 +135,7 @@ For more information, visit: http://f-interop.paris.inria.fr.
     def run(self):
         self.cli()
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     agent = Agent()
     agent.run()
-
-    # try:
-    #     # Loop designed to catch the keyboard interruption
-    #
-    #     while any(map(lambda x: x.is_alive(), agent.plugins)):
-    #         # print([x.isAlive() for x in plugins])
-    #         pass
-    #
-    # except KeyboardInterrupt as SystemExit:
-    #     for plugin in agent.plugins:
-    #         plugin.go_on = False
-    #     time.sleep(1)
-    #     log.critical('! Received keyboard interrupt, quitting threads.\n')

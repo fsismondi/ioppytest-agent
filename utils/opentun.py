@@ -44,8 +44,8 @@ def buf2int(buf):
 
 def formatStringBuf(buf):
     return '({0:>2}B) {1}'.format(
-        len(buf),
-        '-'.join(["%02x" % ord(b) for b in buf]),
+            len(buf),
+            '-'.join(["%02x" % ord(b) for b in buf]),
     )
 
 
@@ -55,8 +55,8 @@ def formatBuf(buf):
     ``[0xab,0xcd,0xef,0x00] -> '(4B) ab-cd-ef-00'``
     """
     return '({0:>2}B) {1}'.format(
-        len(buf),
-        '-'.join(["%02x" % b for b in buf]),
+            len(buf),
+            '-'.join(["%02x" % b for b in buf]),
     )
 
 
@@ -72,8 +72,8 @@ def formatAddr(addr):
 
 def formatThreadList():
     return '\nActive threads ({0})\n   {1}'.format(
-        threading.activeCount(),
-        '\n   '.join([t.name for t in threading.enumerate()]),
+            threading.activeCount(),
+            '\n   '.join([t.name for t in threading.enumerate()]),
     )
 
 
@@ -318,18 +318,24 @@ class TunReadThread(threading.Thread):
         self.goOn = False
 
 
+# TODO Create an interface class OpenTun to agregate common stuff between linux and macos
+
 class OpenTunLinux(object):
     """
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
     def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None,
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
-        # log
-        log.info("create instance")
+
+        # RMQ setups
+        self.connection = rmq_connection
+        self.producer = self.connection.Producer(serializer='json')
+        self.exchange = Exchange(exchange, type="topic", durable=False)
 
         self.name = name
+        self.packet_count = 0
 
         if ipv6_prefix is None:
             # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
@@ -342,6 +348,10 @@ class OpenTunLinux(object):
             ipv6_host = ":1"
 
         self.ipv6_host = ipv6_host
+
+        if ipv6_no_forwarding is None:
+            ipv6_no_forwarding = False
+        self.ipv6_no_forwarding = ipv6_no_forwarding
 
         if ipv4_host is None:
             ipv4_host = "2.2.2.2"
@@ -359,6 +369,7 @@ class OpenTunLinux(object):
         log.debug("IP info")
         log.debug(self.ipv6_prefix)
         log.debug(self.ipv6_host)
+        log.debug(self.ipv6_no_forwarding)
         log.debug(self.ipv4_host)
         log.debug(self.ipv4_network)
         log.debug(self.ipv4_netmask)
@@ -369,12 +380,6 @@ class OpenTunLinux(object):
             self.tunReadThread = self._createTunReadThread()
         else:
             self.tunReadThread = None
-
-        # f-interop related part
-
-        self.connection = rmq_connection
-        self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
 
     # ======================== public ==========================================
 
@@ -407,32 +412,6 @@ class OpenTunLinux(object):
 
     def _getNetworkPrefix_notif(self, sender, signal, data):
         return self.ipv6_prefix
-
-    def _eventBusToTun(self, sender, signal, data):
-        """
-        Called when receiving data from the EventBus.
-
-        This function forwards the data to the the TUN interface.
-        """
-
-        # abort if not tun interface
-        if not self.tunIf:
-            return
-
-        # add tun header
-        data = VIRTUALTUNID + data
-
-        # convert data to string
-        data = ''.join([chr(b) for b in data])
-
-        try:
-            # write over tuntap interface
-            os.write(self.tunIf, data)
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug("data dispatched to tun correctly {0}, {1}".format(signal, sender))
-        except Exception as err:
-            errMsg = formatCriticalMessage(err)
-            log.critical(errMsg)
 
     def _createTunIf(self):
         """
@@ -474,8 +453,13 @@ class OpenTunLinux(object):
             # os.system('ip -6 route add ' + ipv6_prefixStr + '::/64 via ' + IPv6Prefix + ':' + ipv6_hostStr + '/64')
 
             # =====
-            log.info("enabling IPv6 forwarding...")
-            os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
+
+            if self.ipv6_no_forwarding:
+                log.info("disabling IPv6 forwarding...")
+                os.system('echo 0 > /proc/sys/net/ipv6/conf/all/forwarding')
+            else:
+                log.info("enabling IPv6 forwarding...")
+                os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
 
             # =====
             log.info('\ncreated following virtual interface:')
@@ -497,8 +481,8 @@ class OpenTunLinux(object):
         TUN interface.
         """
         return TunReadThread(
-            self.tunIf,
-            self._tunToEventBus
+                self.tunIf,
+                self._tunToEventBus
         )
 
     def _tunToEventBus(self, data):
@@ -507,20 +491,23 @@ class OpenTunLinux(object):
 
         This function forwards the data to the the EventBus.
         """
+
         routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
-        log.debug("This is my routing key: %s" % routing_key)
+        log.debug("Pushing message to topic: %s" % routing_key)
+
+        self.packet_count += 1
+        log.info("Messaged captured in tun. Pushing message to F-Interop. Message count (uplink): %s"
+                 % self.packet_count)
+
         # dispatch to EventBus
-        # TODO move timestamp.msg id  and roiuting key, add them as headers , not payload
         msg = {
             "_type": "packet.sniffed.raw",
             "interface_name": self.ifname,
-            "msg_id": str(uuid.uuid1()),
             "timestamp": str(time.time()),
-            "routing_key": routing_key,
             "data": data
         }
 
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
                  '\n' + json.dumps(msg) +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
@@ -529,73 +516,6 @@ class OpenTunLinux(object):
         self.producer.publish(msg,
                               exchange=self.exchange,
                               routing_key=routing_key)
-
-
-class OpenTunMACOS(object):
-    '''
-    Class which interfaces between a TUN virtual interface and an EventBus.
-    '''
-
-    def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
-        # log
-        log.info("create instance")
-
-        self.name = name
-        self.tun_name = ''
-
-        if ipv6_prefix is None:
-            # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-            ipv6_prefix = DEFAULT_IPV6_PREFIX
-
-        self.ipv6_prefix = ipv6_prefix
-
-        if ipv6_host is None:
-            # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-            ipv6_host = "1"
-
-        self.ipv6_host = ipv6_host
-
-        if ipv4_host is None:
-            ipv4_host = "2.2.2.2"
-
-        self.ipv4_host = ipv4_host
-
-        if ipv4_network is None:
-            ipv4_network = [10, 2, 0, 0]
-        self.ipv4_network = ipv4_network
-
-        if ipv4_netmask is None:
-            ipv4_netmask = [255, 255, 0, 0]
-        self.ipv4_netmask = ipv4_netmask
-
-        log.debug("IP info")
-        log.debug(self.ipv6_prefix)
-        log.debug(self.ipv6_host)
-        log.debug(self.ipv4_host)
-        log.debug(self.ipv4_network)
-        log.debug(self.ipv4_netmask)
-
-        # local variables
-        self.tunIf = self._createTunIf()
-        if self.tunIf:
-            self.tunReadThread = self._createTunReadThread()
-        else:
-            self.tunReadThread = None
-
-        # f-interop related part
-
-        self.connection = rmq_connection
-        self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
-
-    #======================== public ==========================================
-
-    #======================== private =========================================
-
-    def _getNetworkPrefix_notif(self, sender, signal, data):
-        return self.ipv6_prefix
 
     def _eventBusToTun(self, sender, signal, data):
         """
@@ -609,7 +529,221 @@ class OpenTunMACOS(object):
             return
 
         # add tun header
-        #data = VIRTUALTUNID + data
+        data = VIRTUALTUNID + data
+
+        # convert data to string
+        data = ''.join([chr(b) for b in data])
+
+        try:
+            # write over tuntap interface
+            os.write(self.tunIf, data)
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("data dispatched to tun correctly {0}, {1}".format(signal, sender))
+        except Exception as err:
+            errMsg = formatCriticalMessage(err)
+            log.critical(errMsg)
+
+
+class OpenTunMACOS(object):
+    '''
+    Class which interfaces between a TUN virtual interface and an EventBus.
+    '''
+
+    def __init__(self, name, rmq_connection, exchange="default",
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
+                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
+
+        # RMQ setups
+        self.connection = rmq_connection
+        self.producer = self.connection.Producer(serializer='json')
+        self.exchange = Exchange(exchange, type="topic", durable=False)
+
+        self.name = name
+        self.tun_name = ''
+        self.packet_count = 0
+
+        if ipv6_prefix is None:
+            # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            ipv6_prefix = DEFAULT_IPV6_PREFIX
+        self.ipv6_prefix = ipv6_prefix
+
+        if ipv6_host is None:
+            # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+            ipv6_host = "1"
+        self.ipv6_host = ipv6_host
+
+        if ipv6_no_forwarding is None:
+            ipv6_no_forwarding = False
+        self.ipv6_no_forwarding = ipv6_no_forwarding
+
+        if ipv4_host is None:
+            ipv4_host = "2.2.2.2"
+        self.ipv4_host = ipv4_host
+
+        if ipv4_network is None:
+            ipv4_network = [10, 2, 0, 0]
+        self.ipv4_network = ipv4_network
+
+        if ipv4_netmask is None:
+            ipv4_netmask = [255, 255, 0, 0]
+        self.ipv4_netmask = ipv4_netmask
+
+
+        log.debug("IP info")
+        log.debug('ipv6_prefix: ' + self.ipv6_prefix)
+        log.debug('ipv6_host: ' + self.ipv6_host)
+        log.debug('ipv6_no_forwarding: ' + str(self.ipv6_no_forwarding))
+        log.debug('ipv4_host: ' + self.ipv4_host)
+        log.debug('ipv4_network: ' + str(self.ipv4_network))
+        log.debug('ipv4_netmask: ' + str(self.ipv4_netmask))
+
+        # local variables
+        self.tunIf = self._createTunIf()
+        if self.tunIf:
+            self.tunReadThread = self._createTunReadThread()
+        else:
+            self.tunReadThread = None
+
+
+
+    # ======================== public ==========================================
+
+    # ======================== private =========================================
+
+    def _getNetworkPrefix_notif(self, sender, signal, data):
+        return self.ipv6_prefix
+
+    def _createTunIf(self):
+        '''
+        Open a TUN/TAP interface and switch it to TUN mode.
+
+        :returns: The handler of the interface, which can be used for later
+            read/write operations.
+        '''
+        # =====
+
+        # import random
+        # TODO test concurrency problems with MacOs drivers when launching two agents in same PC
+        # random_time = 1 + (random.randint(0, 1000) / 1000)
+        # log.debug('waiting {rt} before starting the tun'.format(rt=random_time))
+        # time.sleep(random_time)
+
+        log.info("opening tun interface")
+        tun_counter = 0
+        while tun_counter < 16:
+            try:
+                import os
+                self.ifname = 'tun{0}'.format(tun_counter)
+                f = os.open("/dev/{0}".format(self.ifname), os.O_RDWR)
+                break
+            except OSError:
+                tun_counter += 1
+
+        if tun_counter == 16:
+            raise OSError('TUN device not found: check if it exists or if it is busy.'
+                          ' TunTap driver installed on MacOs?'
+                          ' Running as root?')
+        else:
+
+            # =====
+            log.info("configuring IPv6 address...")
+            # prefixStr = u.formatIPv6Addr(openTun.IPV6PREFIX)
+            # hostStr   = u.formatIPv6Addr(openTun.IPV6HOST)
+
+            # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.prefixStr, hostStr))
+            # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, hostStr))
+
+            # delete starting ":"
+            self.ipv6_host = self.ipv6_host.replace(":", "")
+
+            v = os.system(
+                'ifconfig {0} inet6 {1}::{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
+            v = os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
+
+            # =====
+            log.info("adding static route route...")
+            # added 'metric 1' for router-compatibility constraint
+            # (show ping packet on wireshark but don't send to mote at all)
+
+            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname)
+            log.info("trying with:" + static_route)
+            os.system(static_route)
+
+            # trying to set a gateway for this route
+            # os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
+
+            # =====
+            if self.ipv6_no_forwarding:
+                log.info("disabling IPv6 forwarding...")
+                os.system('sysctl -w net.inet6.ip6.forwarding=0')
+            else:
+                log.info("enabling IPv6 forwarding...")
+                os.system('sysctl -w net.inet6.ip6.forwarding=1')
+
+            # =====
+            log.info('\ncreated following virtual interface:')
+            os.system('ifconfig {0}'.format(self.ifname))
+
+            # =====start radvd
+            # os.system('radvd start')
+
+            return f
+
+    def _createTunReadThread(self):
+        '''
+        Creates and starts the thread to read messages arriving from the
+        TUN interface.
+        '''
+        return TunReadThread(
+                self.tunIf,
+                self._tunToEventBus
+        )
+
+    def _tunToEventBus(self, data):
+        """
+        Called when receiving data from the TUN interface.
+
+        This function forwards the data to the the EventBus.
+        """
+
+        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
+        log.debug("Pushing message to topic: %s" % routing_key)
+
+        self.packet_count += 1
+        log.info("Messaged captured in tun. Pushing message to F-Interop. Message count (uplink): %s"
+                 % self.packet_count)
+
+        # dispatch to EventBus
+        msg = {
+            "_type": "packet.sniffed.raw",
+            "interface_name": self.ifname,
+            "timestamp": str(time.time()),
+            "data": data
+        }
+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
+                 '\n data packet TUN -> EventBus' +
+                 '\n' + json.dumps(msg) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
+        # do not re-encode on json, producer does serialization
+        self.producer.publish(msg,
+                              exchange=self.exchange,
+                              routing_key=routing_key)
+
+    def _eventBusToTun(self, sender, signal, data):
+        """
+        Called when receiving data from the EventBus.
+
+        This function forwards the data to the the TUN interface.
+        """
+
+        # abort if not tun interface
+        if not self.tunIf:
+            return
+
+        # add tun header
+        # data = VIRTUALTUNID + data
 
         # import binascii
         # stri = ""
@@ -621,15 +755,13 @@ class OpenTunMACOS(object):
         #         #stri += i.decode('utf-8')
         #         stri += binascii.hexlify(i.decode('utf-8'))
 
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet EventBus -> TUN' +
                  '\n' + json.dumps(data) +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                  )
         # convert data to string
         data = ''.join([chr(b) for b in data])
-
-
 
         try:
             # write over tuntap interface
@@ -640,116 +772,5 @@ class OpenTunMACOS(object):
             errMsg = formatCriticalMessage(err)
             log.critical(errMsg)
 
-    def _createTunIf(self):
-        '''
-        Open a TUN/TAP interface and switch it to TUN mode.
 
-        :returns: The handler of the interface, which can be used for later
-            read/write operations.
-        '''
-        #=====
-
-        # import random
-        # TODO test concurrency problems with MacOs drivers when launching two agents in same PC
-        #random_time = 1 + (random.randint(0, 1000) / 1000)
-        #log.debug('waiting {rt} before starting the tun'.format(rt=random_time))
-        #time.sleep(random_time)
-
-        log.info("opening tun interface")
-        tun_counter=0
-        while tun_counter<16:
-            try:
-                import os
-                self.ifname='tun{0}'.format(tun_counter)
-                f=os.open("/dev/{0}".format(self.ifname), os.O_RDWR)
-                break
-            except OSError:
-                tun_counter+=1
-
-        if tun_counter==16:
-            raise OSError('TUN device not found: check if it exists or if it is busy.'
-                          ' TunTap driver installed on MacOs?'
-                          ' Running as root?')
-        else:
-
-        #=====
-            log.info("configuring IPv6 address...")
-            # prefixStr = u.formatIPv6Addr(openTun.IPV6PREFIX)
-            # hostStr   = u.formatIPv6Addr(openTun.IPV6HOST)
-
-            # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.prefixStr, hostStr))
-            # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, hostStr))
-
-            #delete starting ":"
-            self.ipv6_host = self.ipv6_host.replace(":", "")
-
-            v=os.system('ifconfig {0} inet6 {1}::{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
-            v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
-
-
-        #=====
-            log.info("adding static route route...")
-            # added 'metric 1' for router-compatibility constraint
-            # (show ping packet on wireshark but don't send to mote at all)
-
-            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname)
-            log.info("trying with:" + static_route)
-            os.system(static_route)
-
-            # trying to set a gateway for this route
-            #os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
-
-        #=====
-            log.info("enabling IPv6 forwarding...")
-            # os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
-            os.system('sysctl -w net.inet6.ip6.forwarding=1')
-
-        #=====
-            print('\ncreated following virtual interface:')
-            os.system('ifconfig {0}'.format(self.ifname))
-
-        #=====start radvd
-            #os.system('radvd start')
-
-
-            return f
-
-    def _createTunReadThread(self):
-        '''
-        Creates and starts the thread to read messages arriving from the
-        TUN interface.
-        '''
-        return TunReadThread(
-            self.tunIf,
-            self._tunToEventBus
-        )
-
-    def _tunToEventBus(self, data):
-        """
-        Called when receiving data from the TUN interface.
-
-        This function forwards the data to the the EventBus.
-        """
-        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
-        log.debug("This is my routing key: %s" % routing_key)
-        # dispatch to EventBus
-        # TODO move timestamp.msg id  and roiuting key, add them as headers , not payload
-        msg = {
-            "_type": "packet.sniffed.raw",
-            "interface_name": self.ifname,
-            "msg_id": str(uuid.uuid1()),
-            "timestamp": str(time.time()),
-            "routing_key": routing_key,
-            "data": data
-        }
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # '+
-                 '\n data packet TUN -> EventBus' +
-                 '\n' + json.dumps(msg) +
-                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
-                 )
-        # do not re-encode on json, producer does serialization
-        self.producer.publish(msg,
-                              exchange=self.exchange,
-                              routing_key=routing_key)
-
-    #======================== helpers =========================================
+            # ======================== helpers =========================================
