@@ -30,7 +30,6 @@ class TunConsumer(BaseConsumer):
         self.tun = None
         self.packet_count = 0
 
-
     def handle_start(self, msg):
         """
         Function that will handle tun management messages
@@ -68,19 +67,19 @@ class TunConsumer(BaseConsumer):
 
             except AttributeError as ae:
                 self.log.error(
-                        'Wrong message format: {0}'.format(msg.payload)
+                    'Wrong message format: {0}'.format(msg.payload)
                 )
                 return
 
             params = {
-                'rmq_connection' : self.connection,
-                'name' : self.name,
-                'ipv6_host' : ipv6_host,
-                'ipv6_prefix' : ipv6_prefix,
-                'ipv4_host' : ipv4_host,
-                'ipv4_network' : ipv4_network,
-                'ipv4_netmask' : ipv4_netmask,
-                'ipv6_no_forwarding' : ipv6_no_forwarding
+                'rmq_connection': self.connection,
+                'name': self.name,
+                'ipv6_host': ipv6_host,
+                'ipv6_prefix': ipv6_prefix,
+                'ipv4_host': ipv4_host,
+                'ipv4_network': ipv4_network,
+                'ipv4_netmask': ipv4_netmask,
+                'ipv6_no_forwarding': ipv6_no_forwarding
             }
 
             if sys.platform.startswith('win32'):
@@ -100,24 +99,22 @@ class TunConsumer(BaseConsumer):
 
             msg = {
                 "_type": "tun.started",
-                'name' : self.name,
-                'ipv6_host' : ipv6_host,
-                'ipv6_prefix' : ipv6_prefix,
-                'ipv4_host' : ipv4_host,
-                'ipv4_network' : ipv4_network,
-                'ipv4_netmask' : ipv4_netmask,
-                'ipv6_no_forwarding' : ipv6_no_forwarding,
+                'name': self.name,
+                'ipv6_host': ipv6_host,
+                'ipv6_prefix': ipv6_prefix,
+                'ipv4_host': ipv4_host,
+                'ipv4_network': ipv4_network,
+                'ipv4_netmask': ipv4_netmask,
+                'ipv6_no_forwarding': ipv6_no_forwarding,
             }
-            self.log.info("Tun started. Publishing msg: %s"%json.dumps(msg))
+            self.log.info("Tun started. Publishing msg: %s" % json.dumps(msg))
 
             producer = Producer(self.connection, serializer='json')
             producer.publish(
-                    msg,
-                    exchange=self.exchange,
-                    routing_key='control.tun.fromAgent.%s'%self.name
+                msg,
+                exchange=self.exchange,
+                routing_key='control.tun.fromAgent.%s' % self.name
             )
-
-
 
     def handle_data(self, body, message):
         """
@@ -135,8 +132,8 @@ class TunConsumer(BaseConsumer):
 
         self.packet_count += 1
 
-        self.log.debug('\n* * * * * * HANDLE DATA (%s) * * * * * * *'%self.packet_count)
-        self.log.debug("TIME: %s"%datetime.datetime.time(datetime.datetime.now()))
+        self.log.debug('\n* * * * * * HANDLE DATA (%s) * * * * * * *' % self.packet_count)
+        self.log.debug("TIME: %s" % datetime.datetime.time(datetime.datetime.now()))
         self.log.debug(" - - - ")
         self.log.debug(("Payload", message.payload))
         self.log.debug(("Properties", message.properties))
@@ -149,12 +146,12 @@ class TunConsumer(BaseConsumer):
         msg = body
         if msg["_type"] == 'packet.to_inject.raw':
             self.log.info("Message received from F-Interop. Injecting in Tun. Message count (downlink): %s"
-                          %self.packet_count)
+                          % self.packet_count)
 
             self.tun._eventBusToTun(
-                    sender="F-Interop server",
-                    signal="tun inject",
-                    data=msg["data"]
+                sender="F-Interop server",
+                signal="tun inject",
+                data=msg["data"]
             )
 
     def handle_control(self, body, message):
@@ -164,7 +161,7 @@ class TunConsumer(BaseConsumer):
             self.log.debug(message)
             if msg["_type"]:
                 self.log.debug('HANDLE CONTROL from tun processing event type: {0}'.format(msg["_type"]))
-        except (ValueError,KeyError) as e:
+        except (ValueError, KeyError) as e:
             message.ack()
             self.log.error(e)
             self.log.error("Incorrect message: {0}".format(message.payload))
