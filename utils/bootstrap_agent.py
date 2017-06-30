@@ -64,7 +64,7 @@ def check_response(channel, queue_name, agent_id):
 
 
 def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding):
-    connection = pika.BlockingConnection(pika.connection.URLParameters(AMQP_URL))
+    connection = pika.BlockingConnection(pika.connection.URLParameters(amqp_url))
     channel = connection.channel()
     agent_event_q = 'agent_bootstrap'
     result = channel.queue_declare(queue=agent_event_q)
@@ -73,7 +73,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
     # lets purge in case there are old messages
     channel.queue_purge(agent_event_q)
 
-    channel.queue_bind(exchange=AMQP_EXCHANGE,
+    channel.queue_bind(exchange=amqp_exchange,
                        queue=callback_queue,
                        routing_key='control.tun.fromAgent.%s' % agent_id)
 
