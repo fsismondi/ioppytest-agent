@@ -41,7 +41,7 @@ class SerialConsumer(BaseConsumer):
 
         try:
             self.serial_port = str(os.environ['FINTEROP_CONNECTOR_SERIAL_PORT'])
-	    self.baudrate=str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
+            self.baudrate=str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
             log.info('FINTEROP_CONNECTOR_SERIAL_PORT env var imported: %s' % self.serial_port)
             # open a subprocess to listen the serialport
             path = os.path.dirname(os.path.abspath(__file__))
