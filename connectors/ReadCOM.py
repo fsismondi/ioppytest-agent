@@ -26,17 +26,18 @@ class ReadCOM(object):
         self.frame=''
         self.start_frame=0
         self.length=0
+	self.amqp_exchange=str(os.environ['AMQP_EXCHANGE'])
         self.ser=serial.Serial(
             port=dev,\
             baudrate=int(br),\
             timeout=0.001)
+    
+        self.mrkey="data.serial.fromAgent."+name
 
-        self.mrkey="data.serial.1."
-
-        if name == "agent1":
-            self.mrkey += "agent2"
-        else:
-            self.mrkey += "agent1"
+#        if name == "agent1":
+#            self.mrkey += "agent2"
+#        else:
+#            self.mrkey += "agent1"
 
         credentials=pika.PlainCredentials(user,passwd)
         connection=pika.BlockingConnection(pika.ConnectionParameters(
