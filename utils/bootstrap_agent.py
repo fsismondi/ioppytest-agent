@@ -11,7 +11,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 queue_name = 'unittest_packet_router'
 
 
-def publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding=False):
+def publish_tun_start(exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding=False):
     d = {
         "_type": "tun.start",
         "name": agent_id,
@@ -21,7 +21,7 @@ def publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forward
     }
 
     channel.basic_publish(
-        exchange='default',
+        exchange=exchange,
         routing_key='control.tun.toAgent.%s' % agent_id,
         mandatory=True,
         properties=pika.BasicProperties(
@@ -31,7 +31,7 @@ def publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forward
     )
 
 
-def publish_tun_bootrap_success(channel, agent_id):
+def publish_tun_bootrap_success(exchange, channel, agent_id):
     d = {
         "_type": "agent.configured",
         "description": "Event agent successfully CONFIGURED",
@@ -39,7 +39,7 @@ def publish_tun_bootrap_success(channel, agent_id):
     }
 
     channel.basic_publish(
-        exchange='default',
+        exchange=exchange,
         routing_key='control.session',
         mandatory=True,
         properties=pika.BasicProperties(
@@ -79,7 +79,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
 
     for i in range(1, 4):
         logging.debug("Let's start the bootstrap the agent %s try number %d" % (agent_id, i))
-        publish_tun_start(channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding)
+        publish_tun_start(amqp_exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding)
         time.sleep(4)
         if check_response(channel, agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
