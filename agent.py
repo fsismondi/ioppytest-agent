@@ -118,7 +118,7 @@ For more information, visit: http://doc.f-interop.eu
         }
 
         if p.port:
-            data.update({"server": "{}:{}".format(p.hostname, p.port)})
+            data.update({"server": "{0}:{1}".format(p.hostname, p.port)})
 
         log.info("Try to connect with %s" % data)
 

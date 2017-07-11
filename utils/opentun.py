@@ -44,8 +44,8 @@ def buf2int(buf):
 
 def formatStringBuf(buf):
     return '({0:>2}B) {1}'.format(
-            len(buf),
-            '-'.join(["%02x" % ord(b) for b in buf]),
+        len(buf),
+        '-'.join(["%02x" % ord(b) for b in buf]),
     )
 
 
@@ -55,8 +55,8 @@ def formatBuf(buf):
     ``[0xab,0xcd,0xef,0x00] -> '(4B) ab-cd-ef-00'``
     """
     return '({0:>2}B) {1}'.format(
-            len(buf),
-            '-'.join(["%02x" % b for b in buf]),
+        len(buf),
+        '-'.join(["%02x" % b for b in buf]),
     )
 
 
@@ -72,8 +72,8 @@ def formatAddr(addr):
 
 def formatThreadList():
     return '\nActive threads ({0})\n   {1}'.format(
-            threading.activeCount(),
-            '\n   '.join([t.name for t in threading.enumerate()]),
+        threading.activeCount(),
+        '\n   '.join([t.name for t in threading.enumerate()]),
     )
 
 
@@ -326,7 +326,7 @@ class OpenTunLinux(object):
     """
 
     def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
@@ -481,8 +481,8 @@ class OpenTunLinux(object):
         TUN interface.
         """
         return TunReadThread(
-                self.tunIf,
-                self._tunToEventBus
+            self.tunIf,
+            self._tunToEventBus
         )
 
     def _tunToEventBus(self, data):
@@ -550,7 +550,7 @@ class OpenTunMACOS(object):
     '''
 
     def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
@@ -588,7 +588,6 @@ class OpenTunMACOS(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
-
         log.debug("IP info")
         log.debug('ipv6_prefix: ' + self.ipv6_prefix)
         log.debug('ipv6_host: ' + self.ipv6_host)
@@ -603,8 +602,6 @@ class OpenTunMACOS(object):
             self.tunReadThread = self._createTunReadThread()
         else:
             self.tunReadThread = None
-
-
 
     # ======================== public ==========================================
 
@@ -639,6 +636,9 @@ class OpenTunMACOS(object):
             except OSError:
                 tun_counter += 1
 
+        # TODO get this from EVN var or command option
+        router_mode = True
+
         if tun_counter == 16:
             raise OSError('TUN device not found: check if it exists or if it is busy.'
                           ' TunTap driver installed on MacOs?'
@@ -665,7 +665,8 @@ class OpenTunMACOS(object):
             # added 'metric 1' for router-compatibility constraint
             # (show ping packet on wireshark but don't send to mote at all)
 
-            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname)
+            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix,
+                                                                                       self.ifname)
             log.info("trying with:" + static_route)
             os.system(static_route)
 
@@ -687,7 +688,83 @@ class OpenTunMACOS(object):
             # =====start radvd
             # os.system('radvd start')
 
-            return f
+
+            # For using agent as router too
+            # TODO undo hardcoded stuff, send this config through the bus
+            log.info("configuring IPv6 address...")
+
+            # # router configs
+            # router_iface_1_host = '2'
+            # router_iface_1_subnet = 'bbbb'
+            # router_iface_1_prefix = 64
+            # router_iface_1_name = 'tun0'
+
+            if self.name == "coap_server_agent":
+                router_iface_2_host = '1'
+                router_iface_2_subnet = 'cccc'
+                router_iface_2_prefix = 64
+                router_iface_2_name = 'en6'
+
+                # iut host
+                iut_host = '2'
+                iut_subnet = 'cccc'
+                iut_prefix = 64
+
+                # # tun interface config
+                # v = os.system('ifconfig {0} inet6 {1}::{2} prefixlen {3}'.format(router_iface_1_name,
+                #                                                                  router_iface_1_subnet,
+                #                                                                  router_iface_1_host,
+                #                                                                  router_iface_1_prefix
+                #                                                                  ))
+                #
+                # v = os.system('ifconfig {0} inet6 fe80::{1} prefixlen {2} add'.format(router_iface_1_name,
+                #                                                                       router_iface_1_host,
+                #                                                                       router_iface_1_prefix
+                #                                                                       ))
+
+                # routing interface config
+                v = os.system('ifconfig {0} inet6 {1}::{2} prefixlen {3}'.format(router_iface_2_name,
+                                                                                 router_iface_2_subnet,
+                                                                                 router_iface_2_host,
+                                                                                 router_iface_2_prefix
+                                                                                 ))
+
+                # routes iut
+                # route_1 = 'route add -inet6 {0}::{1}/{2} -interface {3}'.format(iut_subnet,
+                #                                                                 iut_host,
+                #                                                                 iut_prefix,
+                #                                                                 router_iface_2_name
+                #                                                                 )
+
+                route_1 = 'route add -inet6 {0}::{1} {2}:{3}'.format(iut_subnet,
+                                                                     iut_host,
+                                                                     router_iface_2_subnet,
+                                                                     router_iface_2_host
+                                                                     )
+
+                #os.system(route_1)
+
+                # set up routes
+                # for route in [route_1]:
+                #     log.info("adding static route route...")
+                #     # added 'metric 1' for router-compatibility constraint
+                #     # (show ping packet on wireshark but don't send to mote at all)
+                #
+                #     log.info("trying with:" + route)
+                #     os.system(route)
+
+
+                log.info("enabling IPv6 forwarding...")
+                os.system('sysctl -w net.inet6.ip6.forwarding=1')
+
+                # =====
+                log.info('\ncreated following virtual interface:')
+                os.system('ifconfig {0}'.format(self.ifname))
+
+                log.info('\nrouting congig:')
+                os.system('netstat -f inet6 -nr ')
+
+        return f
 
     def _createTunReadThread(self):
         '''
@@ -695,8 +772,8 @@ class OpenTunMACOS(object):
         TUN interface.
         '''
         return TunReadThread(
-                self.tunIf,
-                self._tunToEventBus
+            self.tunIf,
+            self._tunToEventBus
         )
 
     def _tunToEventBus(self, data):
