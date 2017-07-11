@@ -41,12 +41,13 @@ class SerialConsumer(BaseConsumer):
 
         try:
             self.serial_port = str(os.environ['FINTEROP_CONNECTOR_SERIAL_PORT'])
+	    self.baudrate=str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
             log.info('FINTEROP_CONNECTOR_SERIAL_PORT env var imported: %s' % self.serial_port)
             # open a subprocess to listen the serialport
             path = os.path.dirname(os.path.abspath(__file__))
             path += "/ReadCOM.py"
             print(path)
-            p = Popen(['python', path, str(self.serial_port), "115200", str(self.name), str(self.server),
+            p = Popen(['python', path, str(self.serial_port), str(self.baudrate), str(self.name), str(self.server),
                        str(self.session), str(self.user), str(self.password)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         except KeyError as e:
             logging.warning(
@@ -83,7 +84,7 @@ class SerialConsumer(BaseConsumer):
         usleep = lambda x: time.sleep(x / 1000000.0)
         ser = serial.Serial(
                 port=self.serial_port,
-                baudrate=115200,
+                baudrate=self.baudrate,
                 timeout=0.0)
 
         # inputstr=sys.argv[3]
