@@ -76,9 +76,9 @@ For more information, visit: http://doc.f-interop.eu
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default="amqp://guest:guest@localhost/default",
+            default="amqp://guest:guest@localhost/",
             required=True,
-            help="")
+            help="AMQP url provided by F-Interop")
 
         self.name_option = click.Option(
             param_decls=["--name"],

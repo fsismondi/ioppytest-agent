@@ -10,11 +10,11 @@ from kombu import Exchange
 from kombu import Queue
 from kombu.mixins import ConsumerMixin
 
-DEFAULT_EXCHANGE_NAME = "default"
+DEFAULT_EXCHANGE_NAME = "amq.topic"
 
 
 class BaseConsumer(ConsumerMixin):
-    DEFAULT_EXCHANGE_NAME = "default"
+    DEFAULT_EXCHANGE_NAME = "amq.topic"
 
     def __init__(self, user, password, session, server, name, consumer_name):
         """
@@ -24,7 +24,8 @@ class BaseConsumer(ConsumerMixin):
             password: User password
             session: Test session
             server: Backend for the RMQ
-            name: Identity of the component. Can be an UUID or a human nickname
+            exchange: RMQ exchange for sending messages
+            name: Identity of the agent. Used by testing tools to identify/differentiate each agent on the session
             consumer_name: Name to easily identify a process consuming.
         """
         self.log = logging.getLogger(__name__)
@@ -37,9 +38,9 @@ class BaseConsumer(ConsumerMixin):
         self.name = name
         self.consumer_name = consumer_name
         self.server_url = 'amqp://{user}:{password}@{server}/{session}'.format(user=user,
-                                                                                      password=password,
-                                                                                      session=session,
-                                                                                      server=server)
+                                                                               password=password,
+                                                                               session=session,
+                                                                               server=server)
         self.connection = Connection(self.server_url,
                                      transport_options={'confirm_publish': True})
 

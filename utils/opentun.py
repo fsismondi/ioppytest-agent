@@ -325,14 +325,14 @@ class OpenTunLinux(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
-    def __init__(self, name, rmq_connection, exchange="default",
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
+        self.exchange = Exchange(exchange, type="topic", durable=True)
 
         self.name = name
         self.packet_count = 0
@@ -549,14 +549,14 @@ class OpenTunMACOS(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, exchange="default",
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
+        self.exchange = Exchange(exchange, type="topic", durable=True)
 
         self.name = name
         self.tun_name = ''
