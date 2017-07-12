@@ -24,7 +24,6 @@ class MyTest(ConsumerMixin):
         self.connection = connection
         self.producer = self.connection.Producer(serializer='json')
 
-        self.exchange = Exchange('default', type="topic", durable=True)
         self.control_queue = Queue("control_{name}".format(name=name),
                                    exchange=self.exchange,
                                    durable=True,

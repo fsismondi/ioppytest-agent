@@ -53,17 +53,15 @@ typedef enum {
 } six2six_state_t;
 
 """
+try:
+    AMQP_URL = str(os.environ['AMQP_URL'])
+    AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
+except:
+    AMQP_URL = 'amqp://guest:guest@localhost/'
+    AMQP_EXCHANGE = 'amq.topic'
 
 @pytest.fixture
 def producer():
-
-    try:
-        AMQP_URL = str(os.environ['AMQP_URL'])
-        AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
-    except:
-        AMQP_URL = 'amqp://guest:guest@localhost/'
-        AMQP_EXCHANGE = 'default'
-
     connection = pika.BlockingConnection(
         pika.connection.URLParameters(AMQP_URL))
     channel = connection.channel()
@@ -83,7 +81,7 @@ def test_ping(producer):
          "host": "localhost",
          "payload": "cafe",
          "interface": "tun0"}
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.ping.coucou.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -99,7 +97,7 @@ def test_http(producer):
          "url": "http://f-interop.paris.inria.fr",
          "data": {}
          }
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.http.coucou.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -118,7 +116,7 @@ def test_zmq(producer):
                      "data": {
                          "action": ["imageCommand", "6pAdd", "[6,7]"],
                          "serialPort": "/dev/ttyUSB0"}}}
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -140,7 +138,7 @@ def test_6p_add(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -163,7 +161,7 @@ def test_6p_count(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -186,7 +184,7 @@ def test_6p_list(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -208,7 +206,7 @@ def test_6p_clear(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -232,7 +230,7 @@ def test_6p_delete(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -254,7 +252,7 @@ def test_6p_answers(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -278,7 +276,7 @@ def test_send_dio(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -302,7 +300,7 @@ def test_send_dao(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            body=json.dumps(d))
 
@@ -322,7 +320,7 @@ def test_send_keep_alive(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            body=json.dumps(d))
 
@@ -345,7 +343,7 @@ def test_channel(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -368,7 +366,7 @@ def test_control_ebperiod(producer):
                      },
                      "sender": "f-interop agent"}}
 
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.zeromq.req.client',
                            mandatory=True,
                            body=json.dumps(d))
@@ -388,13 +386,13 @@ def test_control_tun_start(producer):
     }
 
     log.debug("Let's start the bootstrap the agents")
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.tun.toAgent.agent1',
                            mandatory=True,
                            body=json.dumps(d))
 
     d["ipv6_host"] = ":2"
-    producer.basic_publish(exchange='default',
+    producer.basic_publish(exchange=AMQP_EXCHANGE,
                            routing_key='control.tun.toAgent.agent2',
                            mandatory=True,
                            body=json.dumps(d))
