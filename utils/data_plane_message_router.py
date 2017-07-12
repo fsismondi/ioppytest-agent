@@ -44,7 +44,7 @@ def publish_message(channel, message):
 
 class PacketRouter(threading.Thread):
     AGENT_1_ID = 'coap_client_agent'
-    AGENT_2_ID = 'coap_client_agent'
+    AGENT_2_ID = 'coap_server_agent'
     AGENT_TT_ID = 'agent_TT'
 
     def __init__(self, conn, routing_table=None):
@@ -84,7 +84,7 @@ class PacketRouter(threading.Thread):
 
         self.channel.queue_bind(exchange=AMQP_EXCHANGE,
                                 queue=queue_name,
-                                routing_key='data.tun.fromAgent.#')
+                                routing_key='data.serial.fromAgent.#')
 
 
         self.channel.basic_qos(prefetch_count=1)

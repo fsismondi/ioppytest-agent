@@ -91,7 +91,8 @@ class SerialConsumer(BaseConsumer):
         # ser.write(inputstr.decode('hex'))
 
         try:
-            ser.write(bodydict['data'].decode('hex'))
+            output=convert_to_slip(bodydict['data']);
+            ser.write(output.decode('hex'))
         except:
             print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
         usleep(300000)
@@ -100,7 +101,21 @@ class SerialConsumer(BaseConsumer):
         print("***************** MESSAGE INJECTED : BACKEND -> WIRELESS LINK  *******************")
         message.ack()
 
-
+def convert_to_slip(self,body):
+    output="\xC0"
+    for c in body:
+        if c.encode('hex') == 'c0':
+            #endslip
+            output += "\xDB"
+            output += "\xDC"
+        elif c.encode('hex') == 'db':
+            #esc
+            output += "\xDB"
+            output += "\xDD"
+        else:
+            output += c
+    output += "\xC0"
+    return output
 def handle_control(self, body, message):
     msg = None
     try:
