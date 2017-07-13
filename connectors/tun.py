@@ -22,8 +22,8 @@ class TunConsumer(BaseConsumer):
     AMQP helper
     """
 
-    def __init__(self, user, password, session, server, name, consumer_name):
-        super(TunConsumer, self).__init__(user, password, session, server, name, consumer_name)
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
+        super(TunConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
         self.dispatcher = {
             "tun.start": self.handle_start,
         }
@@ -73,6 +73,7 @@ class TunConsumer(BaseConsumer):
 
             params = {
                 'rmq_connection': self.connection,
+                'rmq_exchange': self.exchange,
                 'name': self.name,
                 'ipv6_host': ipv6_host,
                 'ipv6_prefix': ipv6_prefix,
@@ -170,6 +171,8 @@ class TunConsumer(BaseConsumer):
             self.dispatcher[msg["_type"]](msg)
         else:
             self.log.debug("Not supported action")
+
+
 
 
 class TunConnector(BaseController):

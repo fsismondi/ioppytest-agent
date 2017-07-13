@@ -23,11 +23,12 @@ class ZMQConsumer(BaseConsumer):
     AMQP helper
     """
 
-    def __init__(self, user, password, session, server, name, consumer_name):
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
         super(ZMQConsumer, self).__init__(user,
                                           password,
                                           session,
                                           server,
+                                          exchange,
                                           name,
                                           consumer_name)
 
