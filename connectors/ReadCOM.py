@@ -88,9 +88,9 @@ class ReadCOM(object):
                     self.state = STATE_RUBBISH
             else:
                 if data.encode('hex') == SLIP_ESC_ESC:
-                    self.frame += "\xDB"
-                if data.encode('hex') == SLIP_ESC_END:
-                    self.frame += "\xC0"
+                    self.frame += '\xDB'
+                elif data.encode('hex') == SLIP_ESC_END:
+                    self.frame += '\xC0'
                 else:
                     self.frame += data
 

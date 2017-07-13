@@ -32,7 +32,7 @@ class SerialConsumer(BaseConsumer):
         #	thread.start()
         self.bootstrap()
         self.message_count = 0
-
+        self.output=''
     #	print ("it ok")
 
 
@@ -55,6 +55,7 @@ class SerialConsumer(BaseConsumer):
                     'FINTEROP_CONNECTOR_SERIAL_PORT'
                     'if no sniffer/injector needed for test ignore this warning')
 
+
     def handle_data(self, body, message):
         """
         Function that will handle serial management messages
@@ -75,12 +76,13 @@ class SerialConsumer(BaseConsumer):
         # WRITE RECIEVED DATA INTO serial connector -> to SNIFFER-FWD motes -> Wireless link
         path = os.path.dirname(os.path.abspath(__file__))
         # path += "/SendCOM.py"
-        decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
-        bodydict = decoder.decode(body)
+        #decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+        #try:
+        #    bodydict = decoder.decode(body)
+        #except:
+        #    print ("ERROR")
         # p=Popen(['python', path, str(self.serial_port), "115200", str(bodydict['data'])], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-
         # print (path)
-
         usleep = lambda x: time.sleep(x / 1000000.0)
         ser = serial.Serial(
                 port=self.serial_port,
@@ -91,31 +93,44 @@ class SerialConsumer(BaseConsumer):
         # ser.write(inputstr.decode('hex'))
 
         try:
-            output=convert_to_slip(bodydict['data']);
-            ser.write(output.decode('hex'))
+            self.output = 'c0'
+            for c in body['data']:
+                if c == 'c0':
+                    #endslip
+                    self.output += 'db'
+                    self.output += 'dc'
+                elif c == 'db':
+                    #esc
+                    self.output += 'db'
+                    self.output += 'dd'
+                else:
+                    self.output += c
+            self.output += 'c0'
+            print (self.output)
+            ser.write(self.output.decode('hex'))
+
         except:
             print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
         usleep(300000)
 
-        # p.wait()
         print("***************** MESSAGE INJECTED : BACKEND -> WIRELESS LINK  *******************")
         message.ack()
+def convert_to_slip(self, body):
+        self.output = 'C0'
+        # for c in body:
+        #     if c == 'c0':
+        #         #endslip
+        #         output += 'DB'
+        #         output += 'DC'
+        #     elif c == 'db':
+        #         #esc
+        #         output += 'DB'
+        #         output += 'DD'
+        #     else:
+        #         output += c
+        # output += 'C0'
+        # print output
 
-def convert_to_slip(self,body):
-    output="\xC0"
-    for c in body:
-        if c.encode('hex') == 'c0':
-            #endslip
-            output += "\xDB"
-            output += "\xDC"
-        elif c.encode('hex') == 'db':
-            #esc
-            output += "\xDB"
-            output += "\xDD"
-        else:
-            output += c
-    output += "\xC0"
-    return output
 def handle_control(self, body, message):
     msg = None
     try:
