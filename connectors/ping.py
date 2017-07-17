@@ -16,8 +16,8 @@ class PingConsumer(BaseConsumer):
     AMQP helper
     """
 
-    def __init__(self, user, password, session, server, name, consumer_name):
-        super(PingConsumer, self).__init__(user, password, session, server, name, consumer_name)
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
+        super(PingConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
 
     def handle_control(self, body, message):
         """

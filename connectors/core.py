@@ -19,8 +19,8 @@ class CoreConsumer(BaseConsumer):
     AMQP helper
     """
 
-    def __init__(self, user, password, session, server, name, consumer_name):
-        super(CoreConsumer, self).__init__(user, password, session, server, name, consumer_name)
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
+        super(CoreConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
 
     def get_consumers(self, Consumer, channel):
         return [

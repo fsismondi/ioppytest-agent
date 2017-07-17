@@ -62,7 +62,10 @@ F-interop agent and management tool.
 
 Please use the following format to connect to the f-interop server:
 
-sudo python -m agent connect  --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX --name coap_client_agent
+sudo python -m agent connect  
+    --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
+    --exchange myExchange
+    --name coap_client_agent
 
 For more information, visit: http://doc.f-interop.eu
 """,
@@ -76,9 +79,15 @@ For more information, visit: http://doc.f-interop.eu
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default="amqp://guest:guest@localhost/default",
+            default="amqp://guest:guest@localhost/",
             required=True,
-            help="")
+            help="AMQP url provided by F-Interop")
+
+        self.session_amqp_exchange = click.Option(
+            param_decls=["--exchange"],
+            default="amq.topic",
+            required=False,
+            help="AMQP exchange used in the session")
 
         self.name_option = click.Option(
             param_decls=["--name"],
@@ -93,6 +102,7 @@ For more information, visit: http://doc.f-interop.eu
             callback=self.handle_connect,
             params=[
                 self.session_url,
+                self.session_amqp_exchange,
                 self.name_option,
             ],
             short_help="Authenticate user"
@@ -102,7 +112,7 @@ For more information, visit: http://doc.f-interop.eu
 
         self.plugins = {}
 
-    def handle_connect(self, url, name):
+    def handle_connect(self, url, exchange, name):
         """
         Authenticate USER and create agent connection to f-interop.
 
@@ -116,6 +126,9 @@ For more information, visit: http://doc.f-interop.eu
             "server": p.hostname,
             "name": name,
         }
+
+        if exchange:
+            data.update({'exchange':exchange})
 
         if p.port:
             data.update({"server": "{}:{}".format(p.hostname, p.port)})

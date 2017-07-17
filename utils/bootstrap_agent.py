@@ -83,7 +83,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
         time.sleep(4)
         if check_response(channel, agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
-            publish_tun_bootrap_success(channel, agent_id)
+            publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
         elif i < 3:
             pass
         else:
