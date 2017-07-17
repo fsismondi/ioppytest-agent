@@ -9,14 +9,6 @@ from binascii import unhexlify
 import time
 
 
-# import myqueues
-# ser = serial.Serial(
-#   port=sys.argv[1],\
-#   baudrate=int(sys.argv[2]),\
-#   timeout=0.001)
-# print (sys.argv[1])
-# print (sys.argv[2])
-# print (sys.argv[3])
 STATE_OK = 0
 STATE_ESC = 1
 STATE_RUBBISH = 2
@@ -37,18 +29,14 @@ class ReadCOM(object):
         self.frame = ''
         self.start_frame = 0
         self.amqp_exchange = str(os.environ['AMQP_EXCHANGE'])
-        self.state=STATE_RUBBISH
+        self.state=STATE_OK
         self.ser = serial.Serial(
             port=dev, \
             baudrate=int(br), \
             timeout=0.001)
+        self.ser.flushInput();
 
         self.mrkey = "data.serial.fromAgent." + name
-
-        # if name == "coap_server_agent":
-        #     self.mrkey += "coap_client_client"
-        # elif name == "coap_client_agent":
-        #     self.mrkey += "coap_server_agent"
 
         credentials = pika.PlainCredentials(user, passwd)
         connection = pika.BlockingConnection(pika.ConnectionParameters(
@@ -57,12 +45,12 @@ class ReadCOM(object):
             credentials=credentials))
         self.ch = connection.channel()
 
-    #		thread=threading.Thread(target=self.run,args=())
-    #		thread.daemon=True
-    #		thread.start()
+
     def state_rubbish(self, data):
         if data.encode('hex') == SLIP_END:
             self.state = STATE_OK
+            self.start_frame = 0
+            self.frame = ''
 
     def state_esc(self, data):
         if data.encode('hex') != SLIP_ESC_END and data.encode('hex') != SLIP_ESC_ESC:
@@ -71,10 +59,15 @@ class ReadCOM(object):
             self.frame = ''
         else:
             self.state = STATE_OK
+            if self.start_frame == 1:
+                if data.encode('hex') == SLIP_ESC_ESC:
+                    self.frame += SLIP_ESC
+                elif data.encode('hex') == SLIP_ESC_END:
+                    self.frame += SLIP_END
 
     def state_ok(self,data):
         if data.encode('hex') == SLIP_ESC:
-            self.state=STATE_ESC
+            self.state = STATE_ESC
         else:
             if data.encode('hex') == SLIP_END:
                 if self.start_frame == 0:
@@ -85,22 +78,22 @@ class ReadCOM(object):
                 #end frame
                     self.start_frame = 0
                     self.send_amqp(self.frame)
-                    self.state = STATE_RUBBISH
+                    self.state = STATE_OK
             else:
-                if data.encode('hex') == SLIP_ESC_ESC:
-                    self.frame += '\xDB'
-                elif data.encode('hex') == SLIP_ESC_END:
-                    self.frame += '\xC0'
-                else:
-                    self.frame += data
+                    if self.start_frame == 1:
+                        self.frame += data.encode('hex')
+                    else:
+                        self.state = STATE_RUBBISH
 
     def recv_chars(self, chars):
         if chars:
             for c in chars:
                 if self.state == STATE_RUBBISH:
                     self.state_rubbish(c)
+                    continue
                 if self.state == STATE_ESC:
                     self.state_esc(c)
+                    continue
                 if self.state == STATE_OK:
                     self.state_ok(c)
 
@@ -108,11 +101,9 @@ class ReadCOM(object):
 
 
     def send_amqp(self, data):
-        print(data.encode('hex'))
         body = OrderedDict()
         body['_type'] = 'data.serial.to_forward'
-        body['data'] = data.encode('hex')
-        print self.mrkey
+        body['data'] = data
         self.ch.basic_publish(exchange=self.amqp_exchange, \
                               routing_key=self.mrkey, \
                               body=json.dumps(body), )
