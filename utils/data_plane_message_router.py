@@ -14,6 +14,9 @@ AMQP_URL = str(os.environ['AMQP_URL'])
 AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
 COMPONENT_ID = 'packet_router_snippet'
 
+AGENT_1_ID = 'coap_client_agent'
+AGENT_2_ID = 'coap_server_agent'
+AGENT_TT_ID = 'agent_TT'
 # init logging to stnd output and log files
 logger = logging.getLogger(__name__)
 
@@ -43,9 +46,6 @@ def publish_message(channel, message):
 
 
 class PacketRouter(threading.Thread):
-    AGENT_1_ID = 'coap_client_agent'
-    AGENT_2_ID = 'coap_server_agent'
-    AGENT_TT_ID = 'agent_TT'
     # DEFAULT_ROUTING = {
     #     'some.interface.fromAgent.agent1':
     #         ['some.interface.toAgent.agent2'],
