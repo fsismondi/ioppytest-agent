@@ -157,6 +157,7 @@ class PacketRouter(threading.Thread):
 
         try:
             data = body_dict['data']
+            data_slip = body_dict['data_slip']
         except:
             logger.error('wrong message format, no data field found in : {msg}'.format(msg=json.dumps(body_dict)))
             return
@@ -167,7 +168,7 @@ class PacketRouter(threading.Thread):
             for dst_rkey in list_dst_rkey:
                 # resend to dst_rkey
                 self.channel.basic_publish(
-                    body=json.dumps({'_type': 'packet.to_inject.raw', 'data': data}),
+                    body=json.dumps({'_type': 'packet.sniffed.raw', 'data': data, 'data_slip': data_slip}),
                     routing_key=dst_rkey,
                     exchange=AMQP_EXCHANGE,
                     properties=pika.BasicProperties(

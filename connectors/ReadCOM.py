@@ -30,6 +30,7 @@ class ReadCOM(object):
         self.start_frame = 0
         self.amqp_exchange = str(os.environ['AMQP_EXCHANGE'])
         self.state=STATE_OK
+        self.frame_slip = ''
         self.ser = serial.Serial(
             port=dev, \
             baudrate=int(br), \
@@ -51,7 +52,7 @@ class ReadCOM(object):
             self.state = STATE_OK
             self.start_frame = 0
             self.frame = ''
-
+            self.frame_slip = ''
     def state_esc(self, data):
         if data.encode('hex') != SLIP_ESC_END and data.encode('hex') != SLIP_ESC_ESC:
             self.state = STATE_RUBBISH
@@ -77,7 +78,7 @@ class ReadCOM(object):
                 else:
                 #end frame
                     self.start_frame = 0
-                    self.send_amqp(self.frame)
+                    self.send_amqp(self.frame,self.frame_slip)
                     self.state = STATE_OK
             else:
                     if self.start_frame == 1:
@@ -91,22 +92,32 @@ class ReadCOM(object):
                 if self.state == STATE_RUBBISH:
                     self.state_rubbish(c)
                     continue
+                self.frame_slip += c.encode('hex')
                 if self.state == STATE_ESC:
                     self.state_esc(c)
                     continue
                 if self.state == STATE_OK:
                     self.state_ok(c)
 
+    def convert_bytearray_to_intarray(self,ba):
+        ia = []
+        for e in ba:
+            ia.append(e)
+        return ia
 
 
-
-    def send_amqp(self, data):
+    def send_amqp(self, data,data_slip):
         body = OrderedDict()
-        body['_type'] = 'data.serial.to_forward'
-        body['data'] = data
+        body['_type'] = 'packet.sniffed.raw'
+        # body['data'] = data
+        # body['data_slip'] = data_slip
+        body['data'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data))
+        body['data_slip'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data_slip))
+        self.frame_slip=''
         self.ch.basic_publish(exchange=self.amqp_exchange, \
                               routing_key=self.mrkey, \
                               body=json.dumps(body), )
+
 
     def run(self):
         while True:

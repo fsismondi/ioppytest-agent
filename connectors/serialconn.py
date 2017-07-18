@@ -94,23 +94,40 @@ class SerialConsumer(BaseConsumer):
 
         try:
             print (body['data'])
+            #body['data'] is a byte array
             self.output = 'c0'
-            for c in body['data'].decode('hex'):
-                if c.encode('hex') == 'c0':
+            for c in body['data']:
+                if format(c,'02x') == 'c0':
                     #endslip
                     self.output += 'db'
                     self.output += 'dc'
-                elif c.encode('hex') == 'db':
+                elif format(c,'02x') == 'db':
                     #esc
                     self.output += 'db'
                     self.output += 'dd'
                 else:
-                    self.output += c.encode('hex')
+                    self.output += format(c,'02x')
             self.output += 'c0'
             print (self.output)
             ser.write(self.output.decode('hex'))
             ser.flushOutput()
-
+            # print (body['data'])
+            # self.output = 'c0'
+            # for c in body['data'].decode('hex'):
+            #     if c.encode('hex') == 'c0':
+            #         #endslip
+            #         self.output += 'db'
+            #         self.output += 'dc'
+            #     elif c.encode('hex') == 'db':
+            #         #esc
+            #         self.output += 'db'
+            #         self.output += 'dd'
+            #     else:
+            #         self.output += c.encode('hex')
+            # self.output += 'c0'
+            # print (self.output)
+            # ser.write(self.output.decode('hex'))
+            # ser.flushOutput()
         except:
             print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
         #usleep(30)
