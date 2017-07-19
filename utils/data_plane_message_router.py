@@ -14,6 +14,9 @@ AMQP_URL = str(os.environ['AMQP_URL'])
 AMQP_EXCHANGE = str(os.environ['AMQP_EXCHANGE'])
 COMPONENT_ID = 'packet_router_snippet'
 
+AGENT_1_ID = 'coap_client_agent'
+AGENT_2_ID = 'coap_server_agent'
+AGENT_TT_ID = 'agent_TT'
 # init logging to stnd output and log files
 logger = logging.getLogger(__name__)
 
@@ -149,6 +152,7 @@ class PacketRouter(threading.Thread):
 
         try:
             data = body_dict['data']
+            data_slip = body_dict['data_slip']
         except:
             logger.error('wrong message format, no data field found in : {msg}'.format(msg=json.dumps(body_dict)))
             return
@@ -159,7 +163,7 @@ class PacketRouter(threading.Thread):
             for dst_rkey in list_dst_rkey:
                 # resend to dst_rkey
                 self.channel.basic_publish(
-                    body=json.dumps({'_type': 'packet.to_inject.raw', 'data': data}),
+                    body=json.dumps({'_type': 'packet.sniffed.raw', 'data': data, 'data_slip': data_slip}),
                     routing_key=dst_rkey,
                     exchange=AMQP_EXCHANGE,
                     properties=pika.BasicProperties(
