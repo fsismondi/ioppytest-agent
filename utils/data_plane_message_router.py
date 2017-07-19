@@ -80,24 +80,24 @@ class PacketRouter(threading.Thread):
             assert type(src_rkey) is str
             assert type(dst_rkey_list) is list
 
-            src_queue = '%s@%s' % (src_rkey, COMPONENT_ID)
+            queue_packets_from_agents = '%s@%s' % (src_rkey, COMPONENT_ID)
 
-            self.channel.queue_declare(queue=src_queue, auto_delete=False)
+            self.channel.queue_declare(queue=queue_packets_from_agents, auto_delete=False)
             self.channel.queue_bind(exchange=AMQP_EXCHANGE,
-                                    queue=src_queue,
+                                    queue=queue_packets_from_agents,
                                     routing_key=src_rkey)
 
             # bind all src queues to on_request callback
-            self.channel.basic_consume(self.on_request, queue=src_queue)
+            self.channel.basic_consume(self.on_request, queue=queue_packets_from_agents)
 
-            for dst_rkey in dst_rkey_list:
-                # start with clean queues
-                dst_queue = '%s@%s_raw_packet_logs' % (dst_rkey, COMPONENT_ID)
-                self.channel.queue_delete(dst_queue)
-                self.channel.queue_declare(queue=dst_queue, auto_delete=False, arguments={'x-max-length': 10})
-                self.channel.queue_bind(exchange=AMQP_EXCHANGE,
-                                        queue=src_queue,
-                                        routing_key=dst_rkey)
+            # for dst_rkey in dst_rkey_list:
+            #     # start with clean queues
+            #     dst_queue = '%s@%s_raw_packet_logs' % (dst_rkey, COMPONENT_ID)
+            #     self.channel.queue_delete(dst_queue)
+            #     self.channel.queue_declare(queue=dst_queue, auto_delete=False, arguments={'x-max-length': 10})
+            #     self.channel.queue_bind(exchange=AMQP_EXCHANGE,
+            #                             queue=queue_packets_from_agents,
+            #                             routing_key=dst_rkey)
 
     def stop(self):
         self.channel.stop_consuming()
