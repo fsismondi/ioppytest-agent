@@ -207,7 +207,7 @@ if __name__ == '__main__':
 
         logger.info('got SIGINT. Bye bye!')
 
-        sys.exit(0)
+        sys.exit(1)
 
 
     signal.signal(signal.SIGINT, signal_int_handler)
