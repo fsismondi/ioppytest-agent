@@ -46,21 +46,13 @@ class PacketRouter(threading.Thread):
     AGENT_1_ID = 'coap_client_agent'
     AGENT_2_ID = 'coap_server_agent'
     AGENT_TT_ID = 'agent_TT'
-    # DEFAULT_ROUTING = {
-    #     'some.interface.fromAgent.agent1':
-    #         ['some.interface.toAgent.agent2'],
-    #     'some.interface.fromAgent.agent2':
-    #         ['some.interface.toAgent.agent1'],
-    # }
-    DEFAULT_ROUTING = {
-        'data.tun.fromAgent.%s' % AGENT_1_ID: ['data.tun.toAgent.%s' % AGENT_2_ID,
-                                               'data.tun.toAgent.%s' % AGENT_TT_ID
-                                               ],
-
-        'data.tun.fromAgent.%s' % AGENT_2_ID: ['data.tun.toAgent.%s' % AGENT_1_ID,
-                                               'data.tun.toAgent.%s' % AGENT_TT_ID
-                                               ],
-    }
+    DEFAULT_ROUTING = {'data.tun.fromAgent.%s' % AGENT_1_ID: ['data.tun.toAgent.%s' % AGENT_2_ID,
+                                                              'data.tun.toAgent.%s' % AGENT_TT_ID
+                                                              ],
+                       'data.tun.fromAgent.%s' % AGENT_2_ID: ['data.tun.toAgent.%s' % AGENT_1_ID,
+                                                              'data.tun.toAgent.%s' % AGENT_TT_ID
+                                                              ],
+                       }
 
     def __init__(self, conn, routing_table=None):
         threading.Thread.__init__(self)
