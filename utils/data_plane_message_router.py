@@ -92,7 +92,7 @@ class PacketRouter(threading.Thread):
 
             for dst_rkey in dst_rkey_list:
                 # start with clean queues
-                dst_queue = '%s@%s_dumps' % (dst_rkey, COMPONENT_ID)
+                dst_queue = '%s@%s_raw_packet_logs' % (dst_rkey, COMPONENT_ID)
                 self.channel.queue_delete(dst_queue)
                 self.channel.queue_declare(queue=dst_queue, auto_delete=False, arguments={'x-max-length': 10})
                 self.channel.queue_bind(exchange=AMQP_EXCHANGE,
@@ -215,10 +215,8 @@ if __name__ == '__main__':
     # routing tables for between agents' TUNs interfaces and also between agents' serial interfaces
     iut_routing_table_serial = {
         'data.serial.fromAgent.%s' % AGENT_1_ID: ['data.serial.toAgent.%s' % AGENT_2_ID,
-                                                  'data.serial.toAgent.%s' % AGENT_TT_ID
                                                   ],
         'data.serial.fromAgent.%s' % AGENT_2_ID: ['data.serial.toAgent.%s' % AGENT_1_ID,
-                                                  'data.serial.toAgent.%s' % AGENT_TT_ID
                                                   ],
     }
 
