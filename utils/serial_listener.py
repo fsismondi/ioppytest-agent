@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import logging
 import pika
 import json
 import serial
@@ -15,6 +16,7 @@ SLIP_ESC = 'db'
 SLIP_ESC_END = 'dc'
 SLIP_ESC_ESC = 'dd'
 
+logging.getLogger('pika').setLevel(logging.INFO)
 
 class SerialListener(object):
     def __init__(self, dev, br, name, server, session, user, passwd):
