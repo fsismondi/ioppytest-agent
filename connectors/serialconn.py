@@ -9,7 +9,7 @@ import os
 import collections
 from subprocess import Popen, PIPE
 from .base import BaseController, BaseConsumer
-from threading import Thread
+from utils.serial_listener import SerialListener
 import time
 
 __version__ = (0, 0, 1)
@@ -32,7 +32,9 @@ class SerialConsumer(BaseConsumer):
         #	thread.start()
         self.bootstrap()
         self.message_count = 0
-        self.output=''
+        self.output = ''
+        self.serial_listener = None
+
     #	print ("it ok")
 
 
@@ -41,7 +43,7 @@ class SerialConsumer(BaseConsumer):
 
         try:
             self.serial_port = str(os.environ['FINTEROP_CONNECTOR_SERIAL_PORT'])
-            self.baudrate=str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
+            self.baudrate = str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
             log.info('FINTEROP_CONNECTOR_SERIAL_PORT env var imported: %s' % self.serial_port)
             # open a subprocess to listen the serialport
             path = os.path.dirname(os.path.abspath(__file__))
@@ -51,10 +53,11 @@ class SerialConsumer(BaseConsumer):
                        str(self.session), str(self.user), str(self.password)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         except KeyError as e:
             logging.warning(
-                    'Cannot retrieve environment variables for serial connection: '
-                    'FINTEROP_CONNECTOR_SERIAL_PORT'
-                    'if no sniffer/injector needed for test ignore this warning')
+                'Cannot retrieve environment variables for serial connection: '
+                'FINTEROP_CONNECTOR_SERIAL_PORT'
+                'if no sniffer/injector needed for test ignore this warning')
 
+        self.serial_listener = SerialListener('/dev/ttyUSB0', '460800', 'coap_client_agent', 'f-interop.rennes.inria.fr', 'georges_gig', 'george', 'iamthewalrus')
 
     def handle_data(self, body, message):
         """
@@ -76,39 +79,39 @@ class SerialConsumer(BaseConsumer):
         # WRITE RECIEVED DATA INTO serial connector -> to SNIFFER-FWD motes -> Wireless link
         path = os.path.dirname(os.path.abspath(__file__))
         # path += "/SendCOM.py"
-        #decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
-        #try:
+        # decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+        # try:
         #    bodydict = decoder.decode(body)
-        #except:
+        # except:
         #    print ("ERROR")
         # p=Popen(['python', path, str(self.serial_port), "115200", str(bodydict['data'])], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         # print (path)
         usleep = lambda x: time.sleep(x / 1000000.0)
         ser = serial.Serial(
-                port=self.serial_port,
-                baudrate=self.baudrate,
-                timeout=0.0)
+            port=self.serial_port,
+            baudrate=self.baudrate,
+            timeout=0.0)
 
         # inputstr=sys.argv[3]
         # ser.write(inputstr.decode('hex'))
 
         try:
-            print (body['data'])
-            #body['data'] is a byte array
+            print(body['data'])
+            # body['data'] is a byte array
             self.output = 'c0'
             for c in body['data']:
-                if format(c,'02x') == 'c0':
-                    #endslip
+                if format(c, '02x') == 'c0':
+                    # endslip
                     self.output += 'db'
                     self.output += 'dc'
-                elif format(c,'02x') == 'db':
-                    #esc
+                elif format(c, '02x') == 'db':
+                    # esc
                     self.output += 'db'
                     self.output += 'dd'
                 else:
-                    self.output += format(c,'02x')
+                    self.output += format(c, '02x')
             self.output += 'c0'
-            print (self.output)
+            print(self.output)
             ser.write(self.output.decode('hex'))
             ser.flushOutput()
             # print (body['data'])
@@ -130,10 +133,11 @@ class SerialConsumer(BaseConsumer):
             # ser.flushOutput()
         except:
             print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
-        #usleep(30)
+        # usleep(30)
 
         print("***************** MESSAGE INJECTED : BACKEND -> WIRELESS LINK  *******************")
         message.ack()
+
 
 def handle_control(self, body, message):
     msg = None
