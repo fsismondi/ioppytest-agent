@@ -52,8 +52,10 @@ def publish_tun_bootrap_success(exchange, channel, agent_id):
 def check_response(channel, queue_name, agent_id):
     method, header, body = channel.basic_get(queue=queue_name)
     if body is not None:
+
         try:
             body_dict = json.loads(body.decode('utf-8'))
+            print('got message: %s'%body_dict)
             if body_dict['_type'] == "tun.started" and body_dict['name'] == agent_id:
                 return True
         except Exception as e:
@@ -84,6 +86,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
         if check_response(channel, agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
             publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
+            break
         elif i < 3:
             pass
         else:
