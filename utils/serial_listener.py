@@ -3,6 +3,10 @@
 import json
 import serial
 import logging
+import threading
+import time
+import signal
+import sys
 
 from kombu import Exchange
 from collections import OrderedDict
@@ -20,8 +24,11 @@ log = logging.getLogger(__name__)
 
 
 class SerialListener(object):
-    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic", serial_port='/dev/ttyUSB0',
+    def __init__(self, agent_name, rmq_connection, rmq_exchange="amq.topic", serial_port='/dev/ttyUSB0',
                  serial_boudrate='460800'):
+        # give this thread a name
+        self.name = 'SerialListener'
+        self._stop = False
 
         # RMQ setups
         self.connection = rmq_connection
@@ -31,7 +38,7 @@ class SerialListener(object):
         # serial interface Listener config
         self.dev = serial_port
         self.br = serial_boudrate
-        self.name = name
+        self.agent_name = agent_name
         self.frame = ''
         self.start_frame = 0
         self.state = STATE_OK
@@ -44,8 +51,14 @@ class SerialListener(object):
                                  )
         self.ser.flushInput()
 
-        self.mrkey = "data.serial.fromAgent.%s" % name
+        self.mrkey = "data.serial.fromAgent.%s" % self.agent_name
         self.message_read_count = 0
+
+    def close(self):
+        self._stop = True
+
+    def closed(self):
+        return self._stop
 
     def state_rubbish(self, data):
         if data.encode('hex') == SLIP_END:
@@ -121,15 +134,20 @@ class SerialListener(object):
                               exchange=self.exchange,
                               routing_key=self.mrkey)
 
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
+        log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
                  '\n data packet SERIAL -> EventBus' +
                  '\n' + json.dumps(body) +
-                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )
 
     def run(self):
-        while True:
-            numbytes = self.ser.inWaiting()
-            if numbytes > 0:
-                output = self.ser.read(numbytes)  # read output
-                self.recv_chars(output)
+        log.info("starting serial reader thread..")
+        try:
+            while not self.closed():
+                time.sleep(0.1)
+                numbytes = self.ser.inWaiting()
+                if numbytes > 0:
+                    output = self.ser.read(numbytes)  # read output
+                    self.recv_chars(output)
+        except:
+            sys.exit(1)

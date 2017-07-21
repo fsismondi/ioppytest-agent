@@ -1,16 +1,13 @@
-"""
+# -*- coding: utf-8 -*-
 
-"""
-import json
-import sys
-import logging
-import serial
 import os
-import collections
-from subprocess import Popen, PIPE
-from .base import BaseController, BaseConsumer
+import json
+import serial
+import logging
+import threading
+
+from connectors.base import BaseController, BaseConsumer
 from utils.serial_listener import SerialListener
-import time
 
 __version__ = (0, 0, 1)
 
@@ -43,14 +40,17 @@ class SerialConsumer(BaseConsumer):
 
             # open a subprocess to listen the serialport
             params = {
-                'name': self.name,
+                'agent_name': self.name,
                 'rmq_connection': self.connection,
                 'rmq_exchange': "amq.topic",
                 'serial_port': self.serial_port,
                 'serial_boudrate': self.baudrate,
             }
-            self.serial_listener = SerialListener(**params)
-            self.serial_listener.run()
+            serial_listener = SerialListener(**params)
+            serial_listener_th = threading.Thread(target=serial_listener.run, args=())
+            serial_listener_th.daemon=True
+            serial_listener_th.start()
+
 
         except KeyError as e:
             logging.warning(
@@ -74,31 +74,15 @@ class SerialConsumer(BaseConsumer):
 
         """
         if self.serial_port is None:
-            print('error: no serialport initiated')
+            log.error('No serial port initiated')
             return
 
-        # WRITE RECIEVED DATA INTO serial connector -> to SNIFFER-FWD motes -> Wireless link
-        path = os.path.dirname(os.path.abspath(__file__))
-        # path += "/SendCOM.py"
-        # decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
-        # try:
-        #    bodydict = decoder.decode(body)
-        # except:
-        #    print ("ERROR")
-        # p=Popen(['python', path, str(self.serial_port), "115200", str(bodydict['data'])], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        # print (path)
-        usleep = lambda x: time.sleep(x / 1000000.0)
         ser = serial.Serial(
             port=self.serial_port,
             baudrate=self.baudrate,
             timeout=0.0)
 
-        # inputstr=sys.argv[3]
-        # ser.write(inputstr.decode('hex'))
-
         try:
-            print(body['data'])
-            # body['data'] is a byte array
             self.output = 'c0'
             for c in body['data']:
                 if format(c, '02x') == 'c0':
@@ -112,18 +96,22 @@ class SerialConsumer(BaseConsumer):
                 else:
                     self.output += format(c, '02x')
             self.output += 'c0'
-            print(self.output)
             ser.write(self.output.decode('hex'))
             ser.flushOutput()
         except:
-            print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
+            log.error('Error while tring to write serial interface')
 
-        print("***************** MESSAGE INJECTED : BACKEND -> WIRELESS LINK  *******************")
+        log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
+                 '\n data packet SERIAL -> EventBus' +
+                 '\n' + json.dumps(body) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
+                 )
         message.ack()
 
 
 def handle_control(self, body, message):
     msg = None
+
     try:
         msg = json.loads(body)
         log.debug(message)
@@ -132,17 +120,17 @@ def handle_control(self, body, message):
         log.error(e)
         log.error("Incorrect message: {0}".format(body))
         return
+
     if msg["_type"] in self.dispatcher.keys():
         self.dispatcher[msg["_type"]](msg)
     else:
-        log.debug("Not supported action")
+        log.warning("Not supported action")
 
 
 class SerialConnector(BaseController):
     """
 
     """
-
     NAME = "serial"
 
     def __init__(self, **kwargs):
@@ -157,9 +145,6 @@ class SerialConnector(BaseController):
         self.consumer = SerialConsumer(**kwargs)
         self.consumer.log = logging.getLogger(__name__)
         self.consumer.log.setLevel(logging.DEBUG)
-        # p=Popen(['python', './ReadCOM.py', self.serial_port, "115200", str(self.name), str(self.server), str(self.session), str(self.user),str(self.password)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
     def run(self):
         self.consumer.run()
-
-# p=Popen(['python', './ReadCOM.py', self.serial_port, "115200", str(self.name), str(self.server), str(self.session), str(self.user),str(self.password)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
