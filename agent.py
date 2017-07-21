@@ -51,6 +51,20 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 logging.getLogger('amqp').setLevel(logging.INFO)
 
+finteorp_banner = \
+    """
+      ______    _____       _                       
+     |  ____|  |_   _|     | |                      
+     | |__ ______| |  _ __ | |_ ___ _ __ ___  _ __  
+     |  __|______| | | '_ \| __/ _ \ '__/ _ \| '_ \ 
+     | |        _| |_| | | | ||  __/ | | (_) | |_) |
+     |_|       |_____|_| |_|\__\___|_|  \___/| .__/ 
+                                             | |    
+                                             |_|    
+    """
+
+
+
 
 class Agent(object):
     """
@@ -68,6 +82,8 @@ For more information, visit: http://doc.f-interop.eu
 """,
 
     def __init__(self):
+
+        print(finteorp_banner)
 
         self.cli = click.Group(
             add_help_option=Agent.header,

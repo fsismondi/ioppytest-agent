@@ -170,7 +170,6 @@ class SerialListener(object):
         log.info("starting serial reader thread..")
         try:
             while not self.closed():
-                time.sleep(0.1)
                 numbytes = self.ser.inWaiting()
                 if numbytes > 0:
                     output = self.ser.read(numbytes)  # read output
