@@ -8,6 +8,7 @@ import time
 import signal
 import sys
 
+
 from kombu import Exchange
 from collections import OrderedDict
 
@@ -21,6 +22,31 @@ SLIP_ESC_ESC = 'dd'
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
+
+arrow_up = """
+      _
+     / \
+    /   \
+   /     \
+  /       \
+ /__     __\   
+    |   |              _ _       _      
+    |   |             | (_)     | |         
+    |   |  _   _ _ __ | |_ _ __ | | __        
+    |   | | | | | '_ \| | | '_ \| |/ /      
+    |   | | |_| | |_) | | | | | |   <
+    |   |  \__,_| .__/|_|_|_| |_|_|\_\              
+    |   |       | |           
+    |   |       |_|                  
+    !___!   
+   \  O  / 
+    \/|\/ 
+      | 
+     / \
+   _/   \ _
+
+"""
 
 
 class SerialListener(object):
@@ -133,9 +159,9 @@ class SerialListener(object):
         self.producer.publish(body,
                               exchange=self.exchange,
                               routing_key=self.mrkey)
-
+        print(arrow_up)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
-                 '\n data packet SERIAL -> EventBus' +
+                 '\n data packet Serial -> EventBus' +
                  '\n' + json.dumps(body) +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )

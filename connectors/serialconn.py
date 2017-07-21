@@ -13,6 +13,39 @@ __version__ = (0, 0, 1)
 
 log = logging.getLogger(__name__)
 
+finteorp_banner = \
+    """
+      ______    _____       _                       
+     |  ____|  |_   _|     | |                      
+     | |__ ______| |  _ __ | |_ ___ _ __ ___  _ __  
+     |  __|______| | | '_ \| __/ _ \ '__/ _ \| '_ \ 
+     | |        _| |_| | | | ||  __/ | | (_) | |_) |
+     |_|       |_____|_| |_|\__\___|_|  \___/| .__/ 
+                                             | |    
+                                             |_|    
+    """
+
+
+
+
+arrow_down = """
+    ___       
+   |   |              _ _       _      
+   |   |             | (_)     | |         
+   |   |  _   _ _ __ | |_ _ __ | | __        
+   |   | | | | | '_ \| | | '_ \| |/ /      
+   |   | | |_| | |_) | | | | | |   <
+   |   |  \__,_| .__/|_|_|_| |_|_|\_\              
+   |   |       | |           
+   |   |       |_|                  
+ __!   !__,   
+ \       / \O 
+  \     / \/| 
+   \   /    | 
+    \ /    / \
+     Y   _/  _\ 
+"""
+
 
 class SerialConsumer(BaseConsumer):
     """
@@ -48,7 +81,7 @@ class SerialConsumer(BaseConsumer):
             }
             serial_listener = SerialListener(**params)
             serial_listener_th = threading.Thread(target=serial_listener.run, args=())
-            serial_listener_th.daemon=True
+            serial_listener_th.daemon = True
             serial_listener_th.start()
 
 
@@ -57,8 +90,6 @@ class SerialConsumer(BaseConsumer):
                 'Cannot retrieve environment variables for serial connection: '
                 'FINTEROP_CONNECTOR_SERIAL_PORT/FINTEROP_CONNECTOR_BAUDRATE '
                 'If no sniffer/injector needed for test ignore this warning ')
-
-
 
     def handle_data(self, body, message):
         """
@@ -101,8 +132,9 @@ class SerialConsumer(BaseConsumer):
         except:
             log.error('Error while tring to write serial interface')
 
+        print(arrow_down)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
-                 '\n data packet SERIAL -> EventBus' +
+                 '\n data packet EventBus -> Serial' +
                  '\n' + json.dumps(body) +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )
