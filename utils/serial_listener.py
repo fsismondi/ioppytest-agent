@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import sys
-import logging
-import pika
 import json
 import serial
-import os
+import logging
+
+from kombu import Exchange
 from collections import OrderedDict
 
 STATE_OK = 0
@@ -16,36 +15,37 @@ SLIP_ESC = 'db'
 SLIP_ESC_END = 'dc'
 SLIP_ESC_ESC = 'dd'
 
-logging.getLogger('pika').setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
 
 class SerialListener(object):
-    def __init__(self, dev, br, name, server, session, user, passwd):
-        self.dev = dev
-        self.br = br
+    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic", serial_port='/dev/ttyUSB0',
+                 serial_boudrate='460800'):
+
+        # RMQ setups
+        self.connection = rmq_connection
+        self.producer = self.connection.Producer(serializer='json')
+        self.exchange = Exchange(rmq_exchange, type="topic", durable=True)
+
+        # serial interface Listener config
+        self.dev = serial_port
+        self.br = serial_boudrate
         self.name = name
-        self.server = server
-        self.session = session
-        self.user = user
-        self.passwd = passwd
         self.frame = ''
         self.start_frame = 0
-        self.amqp_exchange = str(os.environ['AMQP_EXCHANGE'])
         self.state = STATE_OK
         self.frame_slip = ''
-        self.ser = serial.Serial(port=dev,
-                                 baudrate=int(br),
+
+        log.info("opening serial reader..")
+        self.ser = serial.Serial(port=self.dev,
+                                 baudrate=int(self.br),
                                  timeout=0.001
                                  )
         self.ser.flushInput()
 
-        self.mrkey = "data.serial.fromAgent." + name
-
-        credentials = pika.PlainCredentials(user, passwd)
-        connection = pika.BlockingConnection(pika.ConnectionParameters(
-            host=server,
-            virtual_host=session,
-            credentials=credentials))
-        self.ch = connection.channel()
+        self.mrkey = "data.serial.fromAgent.%s" % name
+        self.message_read_count = 0
 
     def state_rubbish(self, data):
         if data.encode('hex') == SLIP_END:
@@ -88,6 +88,8 @@ class SerialListener(object):
                     self.state = STATE_RUBBISH
 
     def recv_chars(self, chars):
+        self.message_read_count += 1
+        log.debug("Message received in serial interface. Count: %s" % self.message_read_count)
         if chars:
             for c in chars:
                 if self.state == STATE_RUBBISH:
@@ -108,16 +110,22 @@ class SerialListener(object):
 
     def send_amqp(self, data, data_slip):
         body = OrderedDict()
+
         body['_type'] = 'packet.sniffed.raw'
-        # body['data'] = data
-        # body['data_slip'] = data_slip
+        body['interface_name'] = 'serial'
         body['data'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data))
         body['data_slip'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data_slip))
         self.frame_slip = ''
-        self.ch.basic_publish(exchange=self.amqp_exchange,
-                              routing_key=self.mrkey,
-                              body=json.dumps(body),
-                              )
+
+        self.producer.publish(body,
+                              exchange=self.exchange,
+                              routing_key=self.mrkey)
+
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
+                 '\n data packet SERIAL -> EventBus' +
+                 '\n' + json.dumps(body) +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
 
     def run(self):
         while True:
@@ -125,20 +133,3 @@ class SerialListener(object):
             if numbytes > 0:
                 output = self.ser.read(numbytes)  # read output
                 self.recv_chars(output)
-
-
-# # p=ReadCOM('/dev/ttyUSB0','115200','agent2','f-interop.rennes.inria.fr','session01','paul','iamthewalrus')
-# p = ReadCOM(sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
-# while True:
-#     numbytes = p.ser.inWaiting()
-#     if numbytes > 0:
-#         output = p.ser.read(numbytes)  # read output
-#         p.recv_chars(output)
-
-# print (sys.argv[1])
-# print (int(sys.argv[2]))
-# print (sys.argv[3])
-# print (sys.argv[4])
-# print (sys.argv[5])
-# print (sys.argv[6])
-# print (sys.argv[7])

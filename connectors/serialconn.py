@@ -27,37 +27,38 @@ class SerialConsumer(BaseConsumer):
         self.dispatcher = {
             "data.serial.to_forward": self.handle_data,
         }
-        #        thread = Thread(target=self.bootstrap(), args=())
-        #	thread.daemon = True
-        #	thread.start()
         self.bootstrap()
         self.message_count = 0
         self.output = ''
         self.serial_listener = None
 
-    #	print ("it ok")
-
-
     def bootstrap(self):
         self.serial_port = None
-
         try:
             self.serial_port = str(os.environ['FINTEROP_CONNECTOR_SERIAL_PORT'])
             self.baudrate = str(os.environ['FINTEROP_CONNECTOR_BAUDRATE'])
+
             log.info('FINTEROP_CONNECTOR_SERIAL_PORT env var imported: %s' % self.serial_port)
+            log.info('FINTEROP_CONNECTOR_BAUDRATE env var imported: %s' % self.baudrate)
+
             # open a subprocess to listen the serialport
-            path = os.path.dirname(os.path.abspath(__file__))
-            path += "/ReadCOM.py"
-            print(path)
-            p = Popen(['python', path, str(self.serial_port), str(self.baudrate), str(self.name), str(self.server),
-                       str(self.session), str(self.user), str(self.password)], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            params = {
+                'name': self.name,
+                'rmq_connection': self.connection,
+                'rmq_exchange': "amq.topic",
+                'serial_port': self.serial_port,
+                'serial_boudrate': self.baudrate,
+            }
+            self.serial_listener = SerialListener(**params)
+            self.serial_listener.run()
+
         except KeyError as e:
             logging.warning(
                 'Cannot retrieve environment variables for serial connection: '
-                'FINTEROP_CONNECTOR_SERIAL_PORT'
-                'if no sniffer/injector needed for test ignore this warning')
+                'FINTEROP_CONNECTOR_SERIAL_PORT/FINTEROP_CONNECTOR_BAUDRATE '
+                'If no sniffer/injector needed for test ignore this warning ')
 
-        self.serial_listener = SerialListener('/dev/ttyUSB0', '460800', 'coap_client_agent', 'f-interop.rennes.inria.fr', 'georges_gig', 'george', 'iamthewalrus')
+
 
     def handle_data(self, body, message):
         """
@@ -114,26 +115,8 @@ class SerialConsumer(BaseConsumer):
             print(self.output)
             ser.write(self.output.decode('hex'))
             ser.flushOutput()
-            # print (body['data'])
-            # self.output = 'c0'
-            # for c in body['data'].decode('hex'):
-            #     if c.encode('hex') == 'c0':
-            #         #endslip
-            #         self.output += 'db'
-            #         self.output += 'dc'
-            #     elif c.encode('hex') == 'db':
-            #         #esc
-            #         self.output += 'db'
-            #         self.output += 'dd'
-            #     else:
-            #         self.output += c.encode('hex')
-            # self.output += 'c0'
-            # print (self.output)
-            # ser.write(self.output.decode('hex'))
-            # ser.flushOutput()
         except:
             print('ERROR TRYING TO WRITE IN SERIAL INTERFACE')
-        # usleep(30)
 
         print("***************** MESSAGE INJECTED : BACKEND -> WIRELESS LINK  *******************")
         message.ack()
