@@ -44,8 +44,8 @@ def buf2int(buf):
 
 def formatStringBuf(buf):
     return '({0:>2}B) {1}'.format(
-            len(buf),
-            '-'.join(["%02x" % ord(b) for b in buf]),
+        len(buf),
+        '-'.join(["%02x" % ord(b) for b in buf]),
     )
 
 
@@ -55,8 +55,8 @@ def formatBuf(buf):
     ``[0xab,0xcd,0xef,0x00] -> '(4B) ab-cd-ef-00'``
     """
     return '({0:>2}B) {1}'.format(
-            len(buf),
-            '-'.join(["%02x" % b for b in buf]),
+        len(buf),
+        '-'.join(["%02x" % b for b in buf]),
     )
 
 
@@ -72,8 +72,8 @@ def formatAddr(addr):
 
 def formatThreadList():
     return '\nActive threads ({0})\n   {1}'.format(
-            threading.activeCount(),
-            '\n   '.join([t.name for t in threading.enumerate()]),
+        threading.activeCount(),
+        '\n   '.join([t.name for t in threading.enumerate()]),
     )
 
 
@@ -325,14 +325,14 @@ class OpenTunLinux(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
-    def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
+        self.exchange = Exchange(exchange, type="topic", durable=True)
 
         self.name = name
         self.packet_count = 0
@@ -481,8 +481,8 @@ class OpenTunLinux(object):
         TUN interface.
         """
         return TunReadThread(
-                self.tunIf,
-                self._tunToEventBus
+            self.tunIf,
+            self._tunToEventBus
         )
 
     def _tunToEventBus(self, data):
@@ -549,14 +549,14 @@ class OpenTunMACOS(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, exchange="default",
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding = None,
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
+                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=False)
+        self.exchange = Exchange(exchange, type="topic", durable=True)
 
         self.name = name
         self.tun_name = ''
@@ -588,7 +588,6 @@ class OpenTunMACOS(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
-
         log.debug("IP info")
         log.debug('ipv6_prefix: ' + self.ipv6_prefix)
         log.debug('ipv6_host: ' + self.ipv6_host)
@@ -603,8 +602,6 @@ class OpenTunMACOS(object):
             self.tunReadThread = self._createTunReadThread()
         else:
             self.tunReadThread = None
-
-
 
     # ======================== public ==========================================
 
@@ -695,8 +692,8 @@ class OpenTunMACOS(object):
         TUN interface.
         '''
         return TunReadThread(
-                self.tunIf,
-                self._tunToEventBus
+            self.tunIf,
+            self._tunToEventBus
         )
 
     def _tunToEventBus(self, data):

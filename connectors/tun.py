@@ -7,10 +7,7 @@ import json
 import logging
 import sys
 import datetime
-
-from kombu import Connection, Producer
-from kombu import Queue
-
+from kombu import Producer
 from connectors.base import BaseController, BaseConsumer
 from utils.opentun import OpenTunLinux, OpenTunMACOS
 
@@ -110,11 +107,10 @@ class TunConsumer(BaseConsumer):
             self.log.info("Tun started. Publishing msg: %s" % json.dumps(msg))
 
             producer = Producer(self.connection, serializer='json')
-            producer.publish(
-                msg,
-                exchange=self.exchange,
-                routing_key='control.tun.fromAgent.%s' % self.name
-            )
+            producer.publish(msg,
+                             exchange=self.exchange,
+                             routing_key='control.tun.fromAgent.%s' % self.name
+                             )
 
     def handle_data(self, body, message):
         """
