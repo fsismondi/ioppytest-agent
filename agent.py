@@ -29,6 +29,7 @@ by default in the final version.
 import logging
 import click
 import uuid
+import multiprocessing
 
 from connectors.tun import TunConnector
 from connectors.core import CoreConnector
@@ -38,6 +39,7 @@ from connectors.zeromq import ZMQConnector
 from connectors.serialconn import SerialConnector
 
 from utils import arrow_down, arrow_up, finterop_banner
+from utils.packet_dumper import amqp_data_packet_dumper
 
 try:
     from urllib.parse import urlparse
@@ -99,6 +101,20 @@ For more information, visit: http://doc.f-interop.eu
             required=False,
             help="Agent identity (default: random generated)")
 
+        self.dump_option = click.Option(
+            param_decls=["--dump"],
+            default=False,
+            required=False,
+            help="Dump automatically data packets from event bus into pcap files.",
+            is_flag=True)
+
+        self.serial_option = click.Option(
+            param_decls=["--serial"],
+            default=False,
+            required=False,
+            help="Run agent bound to serial injector/forwarder of 802.15.4 frames .",
+            is_flag=True)
+
         # Commands
 
         self.connect_command = click.Command(
@@ -108,15 +124,17 @@ For more information, visit: http://doc.f-interop.eu
                 self.session_url,
                 self.session_amqp_exchange,
                 self.name_option,
+                self.dump_option,
+                self.serial_option
             ],
-            short_help="Authenticate user"
+            short_help="Connect with authentication AMQP_URL, and some other basic agent configurations."
         )
 
         self.cli.add_command(self.connect_command)
 
         self.plugins = {}
 
-    def handle_connect(self, url, exchange, name):
+    def handle_connect(self, url, exchange, name, dump, serial):
         """
         Authenticate USER and create agent connection to f-interop.
 
@@ -132,22 +150,30 @@ For more information, visit: http://doc.f-interop.eu
         }
 
         if exchange:
-            data.update({'exchange':exchange})
+            data.update({'exchange': exchange})
 
         if p.port:
             data.update({"server": "{}:{}".format(p.hostname, p.port)})
 
         log.info("Try to connect with %s" % data)
 
-        self.plugins["core"] = CoreConnector(**data)
-        self.plugins["tun"] = TunConnector(**data)
-        self.plugins["zmq"] = ZMQConnector(**data)
-        self.plugins["ping"] = PingConnector(**data)
-        self.plugins["http"] = HTTPConnector(**data)
-        self.plugins["serial"] = SerialConnector(**data)
+        if serial:
+            self.plugins["serial"] = SerialConnector(**data)
+        else:
+            self.plugins["core"] = CoreConnector(**data)
+            self.plugins["tun"] = TunConnector(**data)
+            self.plugins["zmq"] = ZMQConnector(**data)
+            self.plugins["ping"] = PingConnector(**data)
+            self.plugins["http"] = HTTPConnector(**data)
+
 
         for p in self.plugins.values():
             p.start()
+
+        # TODO re-implement with kombu and BaseController/CoreConsumer
+        if dump:
+            dump_p = multiprocessing.Process(target=amqp_data_packet_dumper, args=())
+            dump_p.start()
 
     def run(self):
         self.cli()
