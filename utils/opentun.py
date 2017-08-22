@@ -333,7 +333,7 @@ class OpenTunLinux(object):
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=True)
+        self.exchange = rmq_exchange
 
         self.name = name
         self.packet_count = 0
@@ -557,7 +557,7 @@ class OpenTunMACOS(object):
         # RMQ setups
         self.connection = rmq_connection
         self.producer = self.connection.Producer(serializer='json')
-        self.exchange = Exchange(exchange, type="topic", durable=True)
+        self.exchange = rmq_exchange
 
         self.name = name
         self.tun_name = ''

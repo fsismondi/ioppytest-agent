@@ -20,8 +20,8 @@ class SerialConsumer(BaseConsumer):
     AMQP helper
     """
 
-    def __init__(self, user, password, session, server, name, consumer_name):
-        super(SerialConsumer, self).__init__(user, password, session, server, name, consumer_name)
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
+        super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
         self.dispatcher = {
             "data.serial.to_forward": self.handle_data,
         }

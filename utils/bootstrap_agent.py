@@ -9,6 +9,7 @@ import time
 logging.getLogger('pika').setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 queue_name = 'unittest_packet_router'
+RETRY_PERIOD = 1
 
 
 def publish_tun_start(exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding=False):
@@ -52,8 +53,10 @@ def publish_tun_bootrap_success(exchange, channel, agent_id):
 def check_response(channel, queue_name, agent_id):
     method, header, body = channel.basic_get(queue=queue_name)
     if body is not None:
+
         try:
             body_dict = json.loads(body.decode('utf-8'))
+            print('got message: %s'%body_dict)
             if body_dict['_type'] == "tun.started" and body_dict['name'] == agent_id:
                 return True
         except Exception as e:
@@ -80,10 +83,11 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
     for i in range(1, 4):
         logging.debug("Let's start the bootstrap the agent %s try number %d" % (agent_id, i))
         publish_tun_start(amqp_exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding)
-        time.sleep(4)
+        time.sleep(RETRY_PERIOD)
         if check_response(channel, agent_event_q, agent_id):
             logging.debug("Agent tun bootstrapped")
-            publish_tun_bootrap_success(channel, agent_id)
+            publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
+            break
         elif i < 3:
             pass
         else:

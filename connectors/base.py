@@ -16,7 +16,7 @@ DEFAULT_EXCHANGE_NAME = "amq.topic"
 class BaseConsumer(ConsumerMixin):
     DEFAULT_EXCHANGE_NAME = "amq.topic"
 
-    def __init__(self, user, password, session, server, name, consumer_name):
+    def __init__(self, user, password, session, server, exchange, name, consumer_name):
         """
 
         Args:
@@ -44,9 +44,14 @@ class BaseConsumer(ConsumerMixin):
         self.connection = Connection(self.server_url,
                                      transport_options={'confirm_publish': True})
 
-        self.exchange = Exchange(BaseConsumer.DEFAULT_EXCHANGE_NAME,
-                                 type="topic",
-                                 durable=True)
+        if exchange:
+            self.exchange = Exchange(exchange,
+                                     type="topic",
+                                     durable=True)
+        else:
+            self.exchange = Exchange(BaseConsumer.DEFAULT_EXCHANGE_NAME,
+                                     type="topic",
+                                     durable=True)
 
         self.control_queue = Queue("control.{consumer_name}@{name}".format(name=name,
                                                                            consumer_name=consumer_name),
