@@ -9,6 +9,7 @@ import sys
 import datetime
 from kombu import Producer
 from connectors.base import BaseController, BaseConsumer
+from utils import arrow_down, arrow_up, finterop_banner
 from utils.opentun import OpenTunLinux, OpenTunMACOS
 
 __version__ = (0, 0, 1)
@@ -127,7 +128,7 @@ class TunConsumer(BaseConsumer):
             return
 
         self.packet_count += 1
-
+        print(arrow_down)
         self.log.debug('\n* * * * * * HANDLE DATA (%s) * * * * * * *' % self.packet_count)
         self.log.debug("TIME: %s" % datetime.datetime.time(datetime.datetime.now()))
         self.log.debug(" - - - ")

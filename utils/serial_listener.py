@@ -11,6 +11,7 @@ import sys
 
 from kombu import Exchange
 from collections import OrderedDict
+from utils import arrow_down, arrow_up, finterop_banner
 
 STATE_OK = 0
 STATE_ESC = 1
@@ -24,29 +25,7 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 
-arrow_up = """
-      _
-     / \\
-    /   \\
-   /     \\
-  /       \\
- /__     __\\   
-    |   |              _ _       _      
-    |   |             | (_)     | |         
-    |   |  _   _ _ __ | |_ _ __ | | __        
-    |   | | | | | '_ \| | | '_ \\| |/ /      
-    |   | | |_| | |_) | | | | | |   <
-    |   |  \__,_| .__/|_|_|_| |_|_|\_\\              
-    |   |       | |           
-    |   |       |_|                  
-    !___!   
-   \\  O  / 
-    \\/|\/ 
-      | 
-     / \\
-   _/   \\ _
 
-"""
 
 
 class SerialListener(object):

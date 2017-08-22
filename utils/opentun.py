@@ -7,11 +7,12 @@ import struct
 import threading
 import time
 import traceback
-import uuid
 from fcntl import ioctl
 import sys
 
 from kombu import Exchange
+
+from utils import arrow_down, arrow_up, finterop_banner
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
@@ -506,7 +507,7 @@ class OpenTunLinux(object):
             "timestamp": str(time.time()),
             "data": data
         }
-
+        print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
                  '\n' + json.dumps(msg) +
@@ -717,7 +718,7 @@ class OpenTunMACOS(object):
             "timestamp": str(time.time()),
             "data": data
         }
-
+        print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
                  '\n' + json.dumps(msg) +

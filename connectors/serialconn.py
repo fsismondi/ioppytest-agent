@@ -8,30 +8,11 @@ import threading
 
 from connectors.base import BaseController, BaseConsumer
 from utils.serial_listener import SerialListener
+from utils import arrow_down, arrow_up, finterop_banner
 
 __version__ = (0, 0, 1)
 
 log = logging.getLogger(__name__)
-
-
-
-arrow_down = """
-    ___       
-   |   |       
-   |   |          
-   |   |         
-   |   |       
-   |   | 
-   |   |               
-   |   |            
-   |   |                   
- __!   !__,
- \\       / \O
-  \\     / \/|
-   \\   /    |
-    \\ /    / \\
-     Y   _/  _\\
-"""
 
 
 class SerialConsumer(BaseConsumer):
