@@ -326,7 +326,7 @@ class OpenTunLinux(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
-    def __init__(self, name, rmq_connection, exchange="amq.topic",
+    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
@@ -550,7 +550,7 @@ class OpenTunMACOS(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, exchange="amq.topic",
+    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
