@@ -37,6 +37,8 @@ from connectors.ping import PingConnector
 from connectors.zeromq import ZMQConnector
 from connectors.serialconn import SerialConnector
 
+from utils import arrow_down, arrow_up, finterop_banner
+
 try:
     from urllib.parse import urlparse
 except ImportError:
@@ -71,6 +73,8 @@ For more information, visit: http://doc.f-interop.eu
 """,
 
     def __init__(self):
+
+        print(finterop_banner)
 
         self.cli = click.Group(
             add_help_option=Agent.header,

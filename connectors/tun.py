@@ -7,11 +7,9 @@ import json
 import logging
 import sys
 import datetime
-
-from kombu import Connection, Producer
-from kombu import Queue
-
+from kombu import Producer
 from connectors.base import BaseController, BaseConsumer
+from utils import arrow_down, arrow_up, finterop_banner
 from utils.opentun import OpenTunLinux, OpenTunMACOS
 
 __version__ = (0, 0, 1)
@@ -111,11 +109,10 @@ class TunConsumer(BaseConsumer):
             self.log.info("Tun started. Publishing msg: %s" % json.dumps(msg))
 
             producer = Producer(self.connection, serializer='json')
-            producer.publish(
-                msg,
-                exchange=self.exchange,
-                routing_key='control.tun.fromAgent.%s' % self.name
-            )
+            producer.publish(msg,
+                             exchange=self.exchange,
+                             routing_key='control.tun.fromAgent.%s' % self.name
+                             )
 
     def handle_data(self, body, message):
         """
@@ -132,7 +129,7 @@ class TunConsumer(BaseConsumer):
             return
 
         self.packet_count += 1
-
+        print(arrow_down)
         self.log.debug('\n* * * * * * HANDLE DATA (%s) * * * * * * *' % self.packet_count)
         self.log.debug("TIME: %s" % datetime.datetime.time(datetime.datetime.now()))
         self.log.debug(" - - - ")

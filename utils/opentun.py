@@ -7,11 +7,12 @@ import struct
 import threading
 import time
 import traceback
-import uuid
 from fcntl import ioctl
 import sys
 
 from kombu import Exchange
+
+from utils import arrow_down, arrow_up, finterop_banner
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
@@ -325,7 +326,7 @@ class OpenTunLinux(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
-    def __init__(self, name, rmq_connection, rmq_exchange,
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
@@ -506,7 +507,7 @@ class OpenTunLinux(object):
             "timestamp": str(time.time()),
             "data": data
         }
-
+        print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
                  '\n' + json.dumps(msg) +
@@ -549,7 +550,7 @@ class OpenTunMACOS(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, rmq_exchange,
+    def __init__(self, name, rmq_connection, exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
 
@@ -717,7 +718,7 @@ class OpenTunMACOS(object):
             "timestamp": str(time.time()),
             "data": data
         }
-
+        print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
                  '\n' + json.dumps(msg) +
