@@ -39,7 +39,7 @@ from connectors.zeromq import ZMQConnector
 from connectors.serialconn import SerialConnector
 
 from utils import arrow_down, arrow_up, finterop_banner
-from utils.packet_dumper import amqp_data_packet_dumper
+from utils.packet_dumper import launch_amqp_data_to_pcap_dumper
 
 try:
     from urllib.parse import urlparse
@@ -51,7 +51,7 @@ __version__ = (0, 0, 1)
 DEFAULT_PLATFORM = 'f-interop.paris.inria.fr'
 LOGGER = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 logging.getLogger('amqp').setLevel(logging.INFO)
 
@@ -172,7 +172,7 @@ For more information, visit: http://doc.f-interop.eu
 
         # TODO re-implement with kombu and BaseController/CoreConsumer
         if dump:
-            dump_p = multiprocessing.Process(target=amqp_data_packet_dumper, args=())
+            dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
             dump_p.start()
 
     def run(self):
