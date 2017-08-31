@@ -171,9 +171,11 @@ For more information, visit: http://doc.f-interop.eu
             p.start()
 
         # TODO re-implement with kombu and BaseController/CoreConsumer
-        if dump:
-            dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
-            dump_p.start()
+        # TODO fix pcap_dumper support for py2, python3 -m utils.packet_dumper works fine tho
+
+        # if dump:
+        #     dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
+        #     dump_p.start()
 
     def run(self):
         self.cli()

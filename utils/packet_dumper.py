@@ -270,13 +270,13 @@ class AmqpDataPacketDumper:
 
             m = Message.from_json(body)
             m.update_properties(**props_dict)
+            logger.info('got event: %s' % type(m))
 
             if isinstance(m, MsgTestingToolTerminate):
                 ch.stop_consuming()
                 self.stop()
 
             if isinstance(m, MsgPacketSniffedRaw):
-                print(repr(m))
 
                 self.dump_packet(m)
 
