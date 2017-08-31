@@ -105,7 +105,7 @@ For more information, visit: http://doc.f-interop.eu
             param_decls=["--dump"],
             default=False,
             required=False,
-            help="Dump automatically data packets from event bus into pcap files.",
+            help="[NOT YET SUPPORTED] Dump automatically data packets from event bus into pcap files.",
             is_flag=True)
 
         self.serial_option = click.Option(
