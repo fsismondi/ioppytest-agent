@@ -22,9 +22,6 @@ class SerialConsumer(BaseConsumer):
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name):
         super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
-        self.dispatcher = {
-            "data.serial.to_forward": self.handle_data,
-        }
         self.bootstrap()
         self.message_count = 0
         self.output = ''
