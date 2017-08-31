@@ -1,5 +1,4 @@
 import os
-import six
 import pika
 import shutil
 import signal
@@ -7,6 +6,13 @@ import logging
 from datetime import datetime
 from utils.messages import *
 from utils.pure_pcapy import Dumper, Pkthdr, DLT_RAW, DLT_IEEE802_15_4_NOFCS
+
+try:
+    # For Python 3.0 and later
+    from urllib.parse import urlparse
+except ImportError:
+    # Fall back to Python 2
+    from urlparse import urlparse
 
 logger = logging.getLogger(__name__)
 logging.getLogger('pika').setLevel(logging.INFO)
@@ -36,7 +42,7 @@ def launch_amqp_data_to_pcap_dumper(amqp_url=None, amqp_exchange=None, topics=No
         try:
             amqp_url = str(os.environ['AMQP_URL'])
             print('Imported AMQP_URL env var: %s' % amqp_url)
-            p = six.moves.urllib_parse.urlparse(amqp_url)
+            p = urlparse(amqp_url)
             user = p.username
             server = p.hostname
             logger.info(
