@@ -341,7 +341,7 @@ class MsgPacketInjectRaw(Message):
     routing_key = None  # depends on the agent_id and the agent interface being used, re-write after creation
 
     _msg_data_template = {
-        "_type": "packet.inject.raw",
+        "_type": "packet.to_inject.raw",
         "interface_name": "tun0",
         "data": [96, 0, 0, 0, 0, 36, 0, 1, 254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 255, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 0, 0, 0, 0, 22, 58, 0, 5, 2, 0, 0, 1, 0, 143, 0, 112, 7, 0, 0, 0, 1, 4, 0, 0, 0, 255, 2, 0, 0,
@@ -1856,7 +1856,7 @@ message_types_dict = {
     "tun.started": MsgAgentTunStarted,  # Agent -> TestingTool
     "serial.started": MsgAgentSerialStarted,  # Agent -> TestingTool
     "packet.sniffed.raw": MsgPacketSniffedRaw,  # Agent -> TestingTool
-    "packet.inject.raw": MsgPacketInjectRaw,  # TestingTool -> Agent
+    "packet.to_inject.raw": MsgPacketInjectRaw,  # TestingTool -> Agent
     "session.interop.configuration": MsgInteropSessionConfiguration,  # Orchestrator -> TestingTool
     "testingtool.configured": MsgTestingToolConfigured,  # TestingTool -> Orchestrator, GUI
     "testingtool.component.ready": MsgTestingToolComponentReady,  # Testing Tool internal
