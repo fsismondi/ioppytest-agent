@@ -3,11 +3,7 @@
 import json
 import serial
 import logging
-import threading
-import time
-import signal
 import sys
-
 
 from kombu import Exchange
 from collections import OrderedDict
@@ -23,9 +19,6 @@ SLIP_ESC_ESC = 'dd'
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-
-
-
 
 
 class SerialListener(object):
@@ -153,5 +146,6 @@ class SerialListener(object):
                 if numbytes > 0:
                     output = self.ser.read(numbytes)  # read output
                     self.recv_chars(output)
-        except:
+        except Exception as e:
+            log.error('Error found while processing received data stream in serial: %s' % str(e))
             sys.exit(1)
