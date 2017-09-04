@@ -27,7 +27,7 @@ Usage:
 >>> from messages import * # doctest: +SKIP
 >>> m = MsgTestCaseSkip()
 >>> m
-MsgTestCaseSkip(_api_version = 0.1.36, _type = testcoordination.testcase.skip, testcase_id = TD_COAP_CORE_02_v01, )
+MsgTestCaseSkip(_api_version = 0.1.38, _type = testcoordination.testcase.skip, testcase_id = TD_COAP_CORE_02_v01, )
 >>> m.routing_key
 'control.testcoordination'
 >>> m.message_id # doctest: +SKIP
@@ -38,18 +38,18 @@ MsgTestCaseSkip(_api_version = 0.1.36, _type = testcoordination.testcase.skip, t
 # also we can modify some of the fields (rewrite the default ones)
 >>> m = MsgTestCaseSkip(testcase_id = 'TD_COAP_CORE_03_v01')
 >>> m
-MsgTestCaseSkip(_api_version = 0.1.36, _type = testcoordination.testcase.skip, testcase_id = TD_COAP_CORE_03_v01, )
+MsgTestCaseSkip(_api_version = 0.1.38, _type = testcoordination.testcase.skip, testcase_id = TD_COAP_CORE_03_v01, )
 >>> m.testcase_id
 'TD_COAP_CORE_03_v01'
 
 # and even export the message in json format (for example for sending the message though the amqp event bus)
 >>> m.to_json()
-'{"_api_version": "0.1.36", "_type": "testcoordination.testcase.skip", "testcase_id": "TD_COAP_CORE_03_v01"}'
+'{"_api_version": "0.1.38", "_type": "testcoordination.testcase.skip", "testcase_id": "TD_COAP_CORE_03_v01"}'
 
 # We can use the Message class to import json into Message objects:
 >>> m=MsgTestSuiteStart()
 >>> m.to_json()
-'{"_api_version": "0.1.36", "_type": "testcoordination.testsuite.start"}'
+'{"_api_version": "0.1.38", "_type": "testcoordination.testsuite.start"}'
 >>> json_message = m.to_json()
 >>> obj=Message.from_json(json_message)
 >>> type(obj)
@@ -62,7 +62,7 @@ MsgTestCaseSkip(_api_version = 0.1.36, _type = testcoordination.testcase.skip, t
 # the error reply (note that we pass the message of the request to build the reply):
 >>> err = MsgErrorReply(m)
 >>> err
-MsgErrorReply(_api_version = 0.1.36, _type = sniffing.start, error_code = Some error code TBD, error_message = Some
+MsgErrorReply(_api_version = 0.1.38, _type = sniffing.start, error_code = Some error code TBD, error_message = Some
 error message TBD, ok = False, )
 >>> m.reply_to
 'control.sniffing.service.reply'
@@ -81,7 +81,7 @@ import time
 import json
 import uuid
 
-API_VERSION = '0.1.36'
+API_VERSION = '0.1.38'
 
 
 # TODO use metaclasses instead?
@@ -284,9 +284,9 @@ class MsgAgentTunStart(Message):
     }
 
 
-class MsgAgentTunStarted(Message):
+class MsgAgentSerialStarted(Message):
     """
-    Description: Message for indicating that agent tun has been started
+    Description: Message for indicating that agent serial interface has been started
 
     Type: Event
 
@@ -294,7 +294,27 @@ class MsgAgentTunStarted(Message):
 
     Description: TBD
     """
-    routing_key = "control.tun.from.agent_TT"
+    routing_key = "control.serial.from.tbd"
+
+    _msg_data_template = {
+        "_type": "serial.started",
+        "name": "tbd",
+        "port": "tbd",
+        "boudrate": "tbd",
+    }
+
+
+class MsgAgentTunStarted(Message):
+    """
+    Description: Message for indicating that agent tun has been started
+
+    Type: Event
+
+    Pub/Sub: Agent -> Testing Tool
+
+    Description: TBD
+    """
+    routing_key = "control.tun.from.tbd"
 
     _msg_data_template = {
         "_type": "tun.started",
@@ -322,7 +342,6 @@ class MsgPacketInjectRaw(Message):
 
     _msg_data_template = {
         "_type": "packet.inject.raw",
-        "timestamp": "1488586183.45",
         "interface_name": "tun0",
         "data": [96, 0, 0, 0, 0, 36, 0, 1, 254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 255, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 0, 0, 0, 0, 22, 58, 0, 5, 2, 0, 0, 1, 0, 143, 0, 112, 7, 0, 0, 0, 1, 4, 0, 0, 0, 255, 2, 0, 0,
@@ -343,7 +362,6 @@ class MsgPacketSniffedRaw(Message):
 
     _msg_data_template = {
         "_type": "packet.sniffed.raw",
-        "timestamp": "1488586183.45",
         "interface_name": "tun0",
         "data": [96, 0, 0, 0, 0, 36, 0, 1, 254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 255, 2, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 0, 0, 0, 0, 22, 58, 0, 5, 2, 0, 0, 1, 0, 143, 0, 112, 7, 0, 0, 0, 1, 4, 0, 0, 0, 255, 2, 0, 0,
@@ -404,6 +422,45 @@ class MsgTestingToolComponentReady(Message):
         "_type": "testingtool.component.ready",
         "component": "SomeComponent",
         "description": "Component READY to start test suite."
+    }
+
+
+class MsgSessionChat(Message):
+    """
+    Requirements: GUI should implement
+
+    Type: Event
+
+    Pub/Sub: UI 1 (2) -> UI 2 (1)
+
+    Description: Generic descriptor of chat messages
+    """
+    routing_key = "log.warning.the_drummer"
+
+    _msg_data_template = {
+        "_type": "chat",
+        "user_name": "Ringo",
+        "iut_node": "tbd",
+        "description": "I've got blisters on my fingers!"
+    }
+
+
+class MsgSessionLog(Message):
+    """
+    Requirements: Testing Tool SHOULD implement
+
+    Type: Event
+
+    Pub/Sub: Any Testing tool's component -> user/devs interfaces
+
+    Description: Generic descriptor of log messages
+    """
+    routing_key = "log.warning.the_drummer"
+
+    _msg_data_template = {
+        "_type": "log",
+        "component": "the_drummer",
+        "description": "I've got blisters on my fingers!"
     }
 
 
@@ -1792,9 +1849,12 @@ class MsgPerformanceStats(Message):
 
 
 message_types_dict = {
+    "log": MsgSessionLog,  # Any -> Any
+    "chat": MsgSessionChat,  # GUI_x -> GUI_y
     "agent.configured": MsgAgentConfigured,  # TestingTool -> GUI
     "tun.start": MsgAgentTunStart,  # TestingTool -> Agent
     "tun.started": MsgAgentTunStarted,  # Agent -> TestingTool
+    "serial.started": MsgAgentSerialStarted,  # Agent -> TestingTool
     "packet.sniffed.raw": MsgPacketSniffedRaw,  # Agent -> TestingTool
     "packet.inject.raw": MsgPacketInjectRaw,  # TestingTool -> Agent
     "session.interop.configuration": MsgInteropSessionConfiguration,  # Orchestrator -> TestingTool

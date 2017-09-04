@@ -4,7 +4,7 @@ import json
 import serial
 import logging
 import sys
-
+from utils import messages
 from kombu import Exchange
 from collections import OrderedDict
 from utils import arrow_down, arrow_up, finterop_banner
@@ -43,14 +43,40 @@ class SerialListener(object):
         self.frame_slip = ''
 
         log.info("opening serial reader..")
-        self.ser = serial.Serial(port=self.dev,
-                                 baudrate=int(self.br),
-                                 timeout=0.001
-                                 )
-        self.ser.flushInput()
+        try:
+            self.ser = serial.Serial(port=self.dev,
+                                     baudrate=int(self.br),
+                                     timeout=0.001
+                                     )
+        except serial.serialutil.SerialException as e:
+            log.error(e)
+            log.error('Does dev %s exist?' % serial_port)
+            sys.exit(1)
 
-        self.mrkey = "data.serial.fromAgent.%s" % self.agent_name
+        try:
+            self.ser.open()
+        except Exception as e:
+            log.error(e)
+
+        try:
+            self.ser.flushInput()
+        except Exception as e:
+            log.error(e)
+
+        self.data_plane_mrkey = "data.serial.fromAgent.%s" % self.agent_name
+        self.control_plane_mrkey = "control.serial.fromAgent.%s" % self.agent_name
         self.message_read_count = 0
+
+        # notify interface is opened
+        m = messages.MsgAgentSerialStarted(
+            name=self.agent_name,
+            port=self.dev,
+            boudrate=self.br
+        )
+
+        self.producer.publish(m.to_dict(),
+                              exchange=self.exchange,
+                              routing_key=self.control_plane_mrkey)
 
     def close(self):
         self._stop = True
@@ -64,6 +90,8 @@ class SerialListener(object):
             self.start_frame = 0
             self.frame = ''
             self.frame_slip = ''
+        else:
+            log.debug("Rubbish message dropped..")
 
     def state_esc(self, data):
         if data.encode('hex') != SLIP_ESC_END and data.encode('hex') != SLIP_ESC_ESC:
@@ -120,21 +148,22 @@ class SerialListener(object):
         return ia
 
     def send_amqp(self, data, data_slip):
-        body = OrderedDict()
 
-        body['_type'] = 'packet.sniffed.raw'
-        body['interface_name'] = 'serial'
-        body['data'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data))
-        body['data_slip'] = self.convert_bytearray_to_intarray(bytearray.fromhex(data_slip))
+        m = messages.MsgPacketSniffedRaw(
+            interface_name='serial',
+            data=self.convert_bytearray_to_intarray(bytearray.fromhex(data)),
+            data_slip=self.convert_bytearray_to_intarray(bytearray.fromhex(data_slip)),
+        )
+
         self.frame_slip = ''
 
-        self.producer.publish(body,
+        self.producer.publish(m.to_dict(),
                               exchange=self.exchange,
-                              routing_key=self.mrkey)
+                              routing_key=self.data_plane_mrkey)
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
                  '\n data packet Serial -> EventBus' +
-                 '\n' + json.dumps(body) +
+                 '\n' + m.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )
 
