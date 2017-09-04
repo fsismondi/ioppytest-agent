@@ -54,19 +54,14 @@ class SerialListener(object):
             sys.exit(1)
 
         try:
-            self.ser.close()
-        except Exception as e:
-            log.debug(e)
-
-        try:
             self.ser.open()
         except Exception as e:
-            log.debug(e)
+            log.error(e)
 
         try:
             self.ser.flushInput()
         except Exception as e:
-            log.debug(e)
+            log.error(e)
 
         self.data_plane_mrkey = "data.serial.fromAgent.%s" % self.agent_name
         self.control_plane_mrkey = "control.serial.fromAgent.%s" % self.agent_name
