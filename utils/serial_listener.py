@@ -64,6 +64,8 @@ class SerialListener(object):
             self.start_frame = 0
             self.frame = ''
             self.frame_slip = ''
+        else:
+            log.debug("Rubbish message dropped..")
 
     def state_esc(self, data):
         if data.encode('hex') != SLIP_ESC_END and data.encode('hex') != SLIP_ESC_ESC:
