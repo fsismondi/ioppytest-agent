@@ -69,17 +69,17 @@ class SerialListener(object):
             log.debug(e)
 
         self.data_plane_mrkey = "data.serial.fromAgent.%s" % self.agent_name
-        self.control_plane_mrkey = "data.serial.fromAgent.%s" % self.agent_name
+        self.control_plane_mrkey = "control.serial.fromAgent.%s" % self.agent_name
         self.message_read_count = 0
 
         # notify interface is opened
         m = messages.MsgAgentSerialStarted(
             name=self.agent_name,
-            port=self.dv,
+            port=self.dev,
             boudrate=self.br
         )
 
-        self.producer.publish(m.to_json(),
+        self.producer.publish(m.to_dict(),
                               exchange=self.exchange,
                               routing_key=self.control_plane_mrkey)
 
@@ -162,7 +162,7 @@ class SerialListener(object):
 
         self.frame_slip = ''
 
-        self.producer.publish(m.to_json(),
+        self.producer.publish(m.to_dict(),
                               exchange=self.exchange,
                               routing_key=self.data_plane_mrkey)
         print(arrow_up)
