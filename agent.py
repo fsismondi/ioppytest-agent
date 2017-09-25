@@ -162,9 +162,9 @@ For more information, visit: http://doc.f-interop.eu
         else:
             self.plugins["core"] = CoreConnector(**data)
             self.plugins["tun"] = TunConnector(**data)
-            self.plugins["zmq"] = ZMQConnector(**data)
-            self.plugins["ping"] = PingConnector(**data)
-            self.plugins["http"] = HTTPConnector(**data)
+            #self.plugins["zmq"] = ZMQConnector(**data)
+            #self.plugins["ping"] = PingConnector(**data)
+            #self.plugins["http"] = HTTPConnector(**data)
 
 
         for p in self.plugins.values():
