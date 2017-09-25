@@ -71,6 +71,7 @@ class PacketRouter(threading.Thread):
         self.message_count = 0
         self.connection = conn
         self.channel = self.connection.channel()
+        self.channel.basic_qos(prefetch_count=1)
         self.queues_init()
 
         logger.info('packet router waiting for new messages in the data plane..')

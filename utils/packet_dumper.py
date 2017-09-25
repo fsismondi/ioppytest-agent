@@ -238,7 +238,7 @@ class AmqpDataPacketDumper:
         except Exception as e:
             logger.error(e)
 
-        print('Messages dumped : ' + str(self.messages_dumped))
+        print('Messages dumped to pcap: ' + str(self.messages_dumped))
 
     def dumps_rotate(self):
 
