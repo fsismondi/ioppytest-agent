@@ -59,14 +59,16 @@ class BaseConsumer(ConsumerMixin):
                                    routing_key='control.{consumer_name}.toAgent.{name}'.format(
                                        consumer_name=consumer_name,
                                        name=name),
-                                   durable=False)
+                                   durable=False,
+                                   auto_delete=True)
 
         self.data_queue = Queue("data.{consumer_name}@{name}".format(name=name,
                                                                      consumer_name=consumer_name),
                                 exchange=self.exchange,
                                 routing_key='data.{consumer_name}.toAgent.{name}'.format(consumer_name=consumer_name,
                                                                                          name=name),
-                                durable=False)
+                                durable=False,
+                                auto_delete=True)
 
     def get_consumers(self, Consumer, channel):
         return [
