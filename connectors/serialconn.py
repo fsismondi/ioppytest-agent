@@ -22,10 +22,10 @@ class SerialConsumer(BaseConsumer):
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name):
         super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
-        self.bootstrap()
         self.message_count = 0
         self.output = ''
         self.serial_listener = None
+        self.bootstrap()
 
     def bootstrap(self):
         self.serial_port = None

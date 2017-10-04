@@ -158,6 +158,7 @@ For more information, visit: http://doc.f-interop.eu
         log.info("Try to connect with %s" % data)
 
         if serial:
+            self.plugins["core"] = CoreConnector(**data)
             self.plugins["serial"] = SerialConnector(**data)
         else:
             self.plugins["core"] = CoreConnector(**data)
