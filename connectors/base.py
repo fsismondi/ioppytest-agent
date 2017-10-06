@@ -85,17 +85,19 @@ class BaseConsumer(ConsumerMixin):
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
         # control plane info
         self.log.info(
-            "{consumer_name} listening to control plane. "
-            "Queue (consumer): control.{consumer_name}@{name} . "
-            "Topic (binding): control.{consumer_name}.toAgent.{name}"
-                .format(consumer_name=self.consumer_name, name=self.name))
+            "{consumer_name} listening to control plane ".format(consumer_name=self.consumer_name))
+        self.log.info(
+            "Queue: control.{consumer_name}@{name} ".format(consumer_name=self.consumer_name, name=self.name))
+        self.log.info(
+            "Topic: control.{consumer_name}.toAgent.{name}".format(consumer_name=self.consumer_name, name=self.name))
 
         # data plane info
         self.log.info(
-            "{consumer_name} listening to data plane. "
-            "Queue (consumer): data.{consumer_name}@{name} . "
-            "Topic (binding): data.{consumer_name}.toAgent.{name}"
-                .format(consumer_name=self.consumer_name, name=self.name))
+            "{consumer_name} listening to data plane".format(consumer_name=self.consumer_name))
+        self.log.info(
+            "Queue: data.{consumer_name}@{name}".format(consumer_name=self.consumer_name, name=self.name))
+        self.log.info(
+            "Topic: data.{consumer_name}.toAgent.{name}".format(consumer_name=self.consumer_name, name=self.name))
 
     def handle_control(self, body, message):
         self.log.debug("DEFAULT HANDLE CONTROL")
