@@ -8,7 +8,6 @@ import time
 
 logging.getLogger('pika').setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-queue_name = 'unittest_packet_router'
 RETRY_PERIOD = 1
 
 
@@ -56,7 +55,7 @@ def check_response(channel, queue_name, agent_id):
 
         try:
             body_dict = json.loads(body.decode('utf-8'))
-            print('got message: %s'%body_dict)
+            print('got message: %s' % body_dict)
             if body_dict['_type'] == "tun.started" and body_dict['name'] == agent_id:
                 return True
         except Exception as e:
@@ -70,7 +69,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
     connection = pika.BlockingConnection(pika.connection.URLParameters(amqp_url))
     channel = connection.channel()
     agent_event_q = 'agent_bootstrap'
-    result = channel.queue_declare(queue=agent_event_q)
+    result = channel.queue_declare(queue=agent_event_q, auto_delete=True)
     callback_queue = result.method.queue
 
     # lets purge in case there are old messages
@@ -92,13 +91,16 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
             elif i < 3:
                 pass
             else:
-                logging.error("Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
+                logging.error(
+                    "Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
+
     except Exception as e:
-        logging.error("Agent tun bootstrapping mechanism not working, exception %" %e)
+        logging.error("Agent tun bootstrapping mechanism not working, exception %" % e)
+
     finally:
         channel.queue_delete(agent_event_q)
 
-        
+
 if __name__ == "__main__":
 
     # rewrite default values with ENV variables
