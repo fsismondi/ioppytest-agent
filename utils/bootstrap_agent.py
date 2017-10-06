@@ -80,20 +80,25 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
                        queue=callback_queue,
                        routing_key='control.tun.fromAgent.%s' % agent_id)
 
-    for i in range(1, 4):
-        logging.debug("Let's start the bootstrap the agent %s try number %d" % (agent_id, i))
-        publish_tun_start(amqp_exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding)
-        time.sleep(RETRY_PERIOD)
-        if check_response(channel, agent_event_q, agent_id):
-            logging.debug("Agent tun bootstrapped")
-            publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
-            break
-        elif i < 3:
-            pass
-        else:
-            logging.error("Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
+    try:
+        for i in range(1, 4):
+            logging.debug("Let's start the bootstrap the agent %s try number %d" % (agent_id, i))
+            publish_tun_start(amqp_exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding)
+            time.sleep(RETRY_PERIOD)
+            if check_response(channel, agent_event_q, agent_id):
+                logging.debug("Agent tun bootstrapped")
+                publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
+                break
+            elif i < 3:
+                pass
+            else:
+                logging.error("Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
+    except Exception as e:
+        logging.error("Agent tun bootstrapping mechanism not working, exception %" %e)
+    finally:
+        channel.queue_delete(agent_event_q)
 
-
+        
 if __name__ == "__main__":
 
     # rewrite default values with ENV variables
