@@ -157,26 +157,25 @@ For more information, visit: http://doc.f-interop.eu
 
         log.info("Try to connect with %s" % data)
 
+        self.plugins["core"] = CoreConnector(**data)
+
         if serial:
-            self.plugins["core"] = CoreConnector(**data)
             self.plugins["serial"] = SerialConnector(**data)
         else:
-            self.plugins["core"] = CoreConnector(**data)
             self.plugins["tun"] = TunConnector(**data)
-            #self.plugins["zmq"] = ZMQConnector(**data)
-            #self.plugins["ping"] = PingConnector(**data)
-            #self.plugins["http"] = HTTPConnector(**data)
-
+            # self.plugins["zmq"] = ZMQConnector(**data)
+            # self.plugins["ping"] = PingConnector(**data)
+            # self.plugins["http"] = HTTPConnector(**data)
 
         for p in self.plugins.values():
             p.start()
 
-        # TODO re-implement with kombu and BaseController/CoreConsumer
-        # TODO fix pcap_dumper support for py2, python3 -m utils.packet_dumper works fine tho
+            # TODO re-implement with kombu and BaseController/CoreConsumer
+            # TODO fix pcap_dumper support for py2, python3 -m utils.packet_dumper works fine tho
 
-        # if dump:
-        #     dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
-        #     dump_p.start()
+            # if dump:
+            #     dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
+            #     dump_p.start()
 
     def run(self):
         self.cli()
