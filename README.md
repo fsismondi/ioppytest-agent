@@ -1,13 +1,13 @@
 Agent for the f-interop platform
-#################################
-
+--------------------------------
 
 Design
 ------
 
 The design of the f-interop agent is modular by design.
-An agent is made of different processes that connect and exchange messages to each others
-using ZMQ sockets.
+An agent is made of different processes that connect to AMQP message
+broker and exchange messages (in and out) with other components using
+the same AMQP broker.
 
 Note well
 ----
@@ -27,16 +27,180 @@ for more info
 python agent.py --help
 python agent.py connect --help
 ```
+
 Core
 ----
 
-When started, the agent starts up the core module. This component is in charge of launching
-all the other components. If new components needs to be added they just need to be launched
+When started, the agent starts up the core module. This component is in
+charge of launching all the other components.
+If new components needs to be added they just need to be launched
 from this component.
 
-Core open the default ZMQ socket that is used by other components to communicate with each others.
+Core open the default ZMQ socket that is used by other components to
+communicate with each others.
 
 Error handling
 --------------
 
-When there is a Ctrl-C the agent should kill all other components and disconnect as gracefully as possible.
+When there is a Ctrl-C the agent should kill all other components and
+disconnect as gracefully as possible.
+
+
+Serial mode (with probe)
+------------------------
+
+The following diagram describes how the agent the interfaces and
+interactions using serial mode (--serial option)
+
+TODO:
+add link to source code for probe
+
+**IMPORTANT**:
+This mode of functioning assumes the following IEEE802.15.4 settings:
+
+1. Channel, modulation, data-rate (Channels 11-26 at 2.4 GHz).
+2. MAC mode is beaconless.
+3. Security is off
+
+
+# Agent combined with active-probe
+
+This mode can be used for connecting two remote (geographically distant)
+802.15.4 based devices.
+Active mode probe automatically ACKs messages received by the user
+device, the 802.15.4 are not forwarded to the AMQP connection.
+
+```
+
+                           +----------------+
+                           |                |
+                           |   AMQP broker  |
+                           |                |
+                           |                |
+                           +----------------+
+
+
+                                 ^     +
+                                 |     |
+data.serial.fromAgent.agent_name |     | data.serial.toAgent.agent_name
+                                 |     |
+                                 +     v
+
+                           +----------------+
+                           |                |
+                           |                |
+                           |     Agent      |
+                           | (serial mode)  |
+                           |                |
+                           |                |
+                           +-------+--------+
+                                   | USB interface
+                                   | (SLIP protocol)
+                           +-------+--------+                        +---------------+
+                           |                |     802.15.4 frame     |               |
+                           |                |  <-----------------+   |   802.15.4    |
+                           |    probe mote  |                        |     user      |
+                           |  (active mode) |  +----------------->   |    device     |
+                           |                |                        |               |
+                           |                |                        |               |
+                           +----------------+                        +---------------+
+```
+
+
+
+# Agent combined with passive-probe
+
+This mode can be used for forwarding all sniffed packet in a 802.15.4 network to AMQP broker
+and eventually other tools listening to the correct routing keys/topics.
+
+```
+
+                        +----------------+
+                        |                |
+                        |   AMQP broker  |
+                        |                |
+                        |                |
+                        +----------------+
+
+                                 ^
+                                 |
+data.serial.fromAgent.agent_name |
+                                 |
+                                 +
+
+                         +----------------+
+                         |                |
+                         |                |
+                         |     Agent      |
+                         | (serial mode)  |
+                         |                |
+                         |                |
+                         +-------+--------+
+                                 | USB interface
+                                 | (SLIP protocol)
+                         +-------+--------+
+                         |                |
+                         |                |
+                         |    probe mote  |
+                         |  (passive mode)|
+                         |                |
+                         |                |
+                         +-------+--------+
+                                 |
+                                 |
+                                 |
+                                 |
++---------------+                |              +---------------+
+|               |                |              |               |
+|   802.15.4    |       <--------+--------+     |   802.15.4    |
+|     user      |         802.15.4 frames       |     user      |
+|    device     |       +----------------->     |    device     |
+|               |                               |               |
+|               |                               |               |
++---------------+                               +---------------+
+
+```
+
+
+
+IP tunneling mode (active-probe)
+--------------------------------
+
+This mode can be used for communicating two IPv6-based implementations
+tunneling all traffic through AMQP messages.
+
+
+```
+                          +----------------+
+                          |                |
+                          |   AMQP broker  |
+                          |                |
+                          |                |
+                          +----------------+
+
+
+                                ^     +
+                                |     |
+data.tun.fromAgent.agent_name   |     |  data.tun.toAgent.agent_name
+                                |     |
+                                +     v
+
+                 +---------------------------------+
+                 |                                 |
+                 |               Agent             |
+                 |                                 |
+                 |             (tun mode)          |
+                 |                                 |
+                 |                                 |
+                 |   +------tun interface--------+ |
+                 |                                 |
+                 |  +----------------------------+ |
+                 |  |         IPv6-based         | |
+                 |  |        communicating       | |
+                 |  |      piece of software     | |
+                 |  |      (e.g. coap client)    | |
+                 |  |                            | |
+                 |  +----------------------------+ |
+                 +---------------------------------+
+
+```
