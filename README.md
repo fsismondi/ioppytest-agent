@@ -13,20 +13,6 @@ Note well
 ----
 Agent is only supported by python2 -> tun librarires py2 only
 
-Running the agent
------------------
-For running the agent you will need privileges on the machine, basically
-cause we need to open a virtual interface to tunnel the packets.
-The command for executing it will be provided to you by F-Interop web
-GUI,it should look something like this:
-```
-sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client_agent
-```
-for more info 
-```
-python agent.py --help
-python agent.py connect --help
-```
 
 Core
 ----
@@ -67,8 +53,31 @@ This mode of functioning assumes the following IEEE802.15.4 settings:
 
 This mode can be used for connecting two remote (geographically distant)
 802.15.4 based devices.
+
 Active mode probe automatically ACKs messages received by the user
 device, the 802.15.4 are not forwarded to the AMQP connection.
+
+# Running the agent
+-------------------
+export AMQP connection variables, and USB params for the serial connection
+
+env vars:
+`
+export AMQP_EXCHANGE='amq.topic'
+export AMQP_URL="amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX"
+`
+
+check usb port, with for example with `ls /dev/tty*`
+
+`
+export FINTEROP_CONNECTOR_SERIAL_PORT=/dev/tty.XXX
+export FINTEROP_CONNECTOR_BAUDRATE=115200
+`
+
+then execute (e.g. for a coap_server running under the agent):
+`
+python -m agent connect  --url $AMQP_URL --name coap_server_agent --serial
+`
 
 ```
 
@@ -168,6 +177,25 @@ IP tunneling mode (active-probe)
 
 This mode can be used for communicating two IPv6-based implementations
 tunneling all traffic through AMQP messages.
+
+# Running the agent
+-------------------
+For running the agent you will need privileges on the machine, basically
+cause we need to open a virtual interface to tunnel the packets.
+
+The command for executing it will be provided to you by F-Interop web
+GUI,it should look something like this:
+
+```
+sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client_agent
+```
+
+for more info
+```
+python agent.py --help
+python agent.py connect --help
+```
+
 
 
 ```
