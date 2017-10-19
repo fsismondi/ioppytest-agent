@@ -57,7 +57,7 @@ This mode can be used for connecting two remote (geographically distant)
 Active mode probe automatically ACKs messages received by the user
 device, the 802.15.4 are not forwarded to the AMQP connection.
 
-# Running the agent
+## Running the agent
 -------------------
 export AMQP connection variables, and USB params for the serial connection
 
@@ -122,6 +122,10 @@ data.serial.fromAgent.agent_name |     | data.serial.toAgent.agent_name
 This mode can be used for forwarding all sniffed packet in a 802.15.4 network to AMQP broker
 and eventually other tools listening to the correct routing keys/topics.
 
+## Running the agent
+-------------------
+**TBD**
+
 ```
 
                         +----------------+
@@ -178,7 +182,7 @@ IP tunneling mode (active-probe)
 This mode can be used for communicating two IPv6-based implementations
 tunneling all traffic through AMQP messages.
 
-# Running the agent
+## Running the agent
 -------------------
 For running the agent you will need privileges on the machine, basically
 cause we need to open a virtual interface to tunnel the packets.
