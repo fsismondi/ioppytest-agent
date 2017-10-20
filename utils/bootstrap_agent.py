@@ -95,7 +95,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
                     "Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
 
     except Exception as e:
-        logging.error("Agent tun bootstrapping mechanism not working, exception %" % e)
+        logging.error("Agent tun bootstrapping mechanism not working, exception %s" % e)
 
     finally:
         channel.queue_delete(agent_event_q)
