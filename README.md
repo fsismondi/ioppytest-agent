@@ -3,7 +3,6 @@ Agent for the f-interop platform
 
 Design
 ------
-
 The design of the f-interop agent is modular by design.
 An agent is made of different processes that connect to AMQP message
 broker and exchange messages (in and out) with other components using
@@ -16,7 +15,6 @@ Agent is only supported by python2 -> tun librarires py2 only
 
 Core
 ----
-
 When started, the agent starts up the core module. This component is in
 charge of launching all the other components.
 If new components needs to be added they just need to be launched
@@ -27,14 +25,12 @@ communicate with each others.
 
 Error handling
 --------------
-
 When there is a Ctrl-C the agent should kill all other components and
 disconnect as gracefully as possible.
 
 
-Serial mode (with probe)
-------------------------
-
+Serial mode (with 802.15.4 probe)
+---------------------------------
 The following diagram describes how the agent the interfaces and
 interactions using serial mode (--serial option)
 
@@ -50,7 +46,7 @@ This mode of functioning assumes the following IEEE802.15.4 settings:
 
 
 # Agent combined with active-probe
-
+----------------------------------
 This mode can be used for connecting two remote (geographically distant)
 802.15.4 based devices.
 
@@ -58,7 +54,6 @@ Active mode probe automatically ACKs messages received by the user
 device, the 802.15.4 are not forwarded to the AMQP connection.
 
 ## Running the agent
--------------------
 export AMQP connection variables, and USB params for the serial connection
 
 env vars:
@@ -118,12 +113,11 @@ data.serial.fromAgent.agent_name |     | data.serial.toAgent.agent_name
 
 
 # Agent combined with passive-probe
-
+-----------------------------------
 This mode can be used for forwarding all sniffed packet in a 802.15.4 network to AMQP broker
 and eventually other tools listening to the correct routing keys/topics.
 
 ## Running the agent
--------------------
 **TBD**
 
 ```
@@ -178,12 +172,10 @@ data.serial.fromAgent.agent_name |
 
 IP tunneling mode (active-probe)
 --------------------------------
-
 This mode can be used for communicating two IPv6-based implementations
 tunneling all traffic through AMQP messages.
 
 ## Running the agent
--------------------
 For running the agent you will need privileges on the machine, basically
 cause we need to open a virtual interface to tunnel the packets.
 
