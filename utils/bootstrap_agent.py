@@ -68,7 +68,7 @@ def check_response(channel, queue_name, agent_id):
 def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding):
     connection = pika.BlockingConnection(pika.connection.URLParameters(amqp_url))
     channel = connection.channel()
-    agent_event_q = 'agent_bootstrap'
+    agent_event_q = 'agent_bootstrap|%s' % agent_id
     result = channel.queue_declare(queue=agent_event_q, auto_delete=True)
     callback_queue = result.method.queue
 
