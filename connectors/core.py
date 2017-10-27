@@ -46,7 +46,7 @@ class CoreConsumer(BaseConsumer):
         msg = {
             '_type': 'testingtool.component.ready',
             'component': self.name,
-            "message": "Component ready to start test suite."
+            "description": "Component READY to start test suite."
         }
 
         producer = Producer(connection,serializer='json')
