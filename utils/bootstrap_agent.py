@@ -91,8 +91,8 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
             elif i < 3:
                 pass
             else:
-                logging.error(
-                    "Agent tun bootstrapping mechanism not working, check that the agent was launched correctly")
+                logging.warning(
+                    "Agent didnt answer to bootstrap command, is agent up? it is already bootstrapped?")
 
     except Exception as e:
         logging.error("Agent tun bootstrapping mechanism not working, exception %s" % e)
