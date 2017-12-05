@@ -69,7 +69,7 @@ Please use the following format to connect to the f-interop server:
 sudo python -m agent connect  
     --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
     --exchange myExchange
-    --name coap_client_agent
+    --name coap_client
 
 For more information, visit: http://doc.f-interop.eu
 """,

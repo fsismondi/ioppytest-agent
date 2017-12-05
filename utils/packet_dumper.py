@@ -57,10 +57,10 @@ def launch_amqp_data_to_pcap_dumper(amqp_url=None, amqp_exchange=None, topics=No
     if topics:
         pcap_amqp_topic_subscriptions = topics
     else:
-        pcap_amqp_topic_subscriptions = ['data.serial.fromAgent.coap_client_agent',
-                                         'data.serial.fromAgent.coap_server_agent',
-                                         'data.tun.fromAgent.coap_server_agent',
-                                         'data.tun.fromAgent.coap_client_agent',
+        pcap_amqp_topic_subscriptions = ['data.serial.fromAgent.coap_client',
+                                         'data.serial.fromAgent.coap_server',
+                                         'data.tun.fromAgent.coap_server',
+                                         'data.tun.fromAgent.coap_client',
                                          ]
 
     # init pcap_dumper

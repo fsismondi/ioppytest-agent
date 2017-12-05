@@ -71,7 +71,7 @@ export FINTEROP_CONNECTOR_BAUDRATE=115200
 
 then execute (e.g. for a coap_server running under the agent):
 `
-python -m agent connect  --url $AMQP_URL --name coap_server_agent --serial
+python -m agent connect  --url $AMQP_URL --name coap_server --serial
 `
 
 ```
@@ -183,7 +183,7 @@ The command for executing it will be provided to you by F-Interop web
 GUI,it should look something like this:
 
 ```
-sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client_agent
+sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client
 ```
 
 for more info
