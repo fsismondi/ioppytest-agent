@@ -2,6 +2,5 @@ click
 six
 kombu
 pika
-zmq
 pyserial
 requests

@@ -34,8 +34,6 @@ import multiprocessing
 from connectors.tun import TunConnector
 from connectors.core import CoreConnector
 from connectors.http import HTTPConnector
-from connectors.ping import PingConnector
-from connectors.zeromq import ZMQConnector
 from connectors.serialconn import SerialConnector
 
 from utils import arrow_down, arrow_up, finterop_banner
@@ -46,7 +44,7 @@ try:
 except ImportError:
     from urlparse import urlparse
 
-__version__ = (0, 0, 1)
+__version__ = (0, 1, 0)
 
 DEFAULT_PLATFORM = 'f-interop.paris.inria.fr'
 LOGGER = logging.getLogger(__name__)
@@ -163,8 +161,6 @@ For more information, visit: http://doc.f-interop.eu
             self.plugins["serial"] = SerialConnector(**data)
         else:
             self.plugins["tun"] = TunConnector(**data)
-            # self.plugins["zmq"] = ZMQConnector(**data)
-            # self.plugins["ping"] = PingConnector(**data)
             # self.plugins["http"] = HTTPConnector(**data)
 
         for p in self.plugins.values():

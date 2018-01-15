@@ -3,13 +3,12 @@ Plugin to connect to the F-interop backend
 """
 import json
 import logging
+from utils.messages import *
 from kombu import Producer
 
 from .base import BaseController, BaseConsumer
 
-
-__version__ = (0, 0, 1)
-
+__version__ = (0, 1, 0)
 
 log = logging.getLogger(__name__)
 
@@ -20,59 +19,33 @@ class CoreConsumer(BaseConsumer):
     """
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name):
-        super(CoreConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
-
-    def get_consumers(self, Consumer, channel):
-        return [
-            Consumer(queues=[self.control_queue],
-                     callbacks=[self.handle_control],
-                     no_ack=True,
-                     accept=['json']),
-            Consumer(queues=[self.data_queue],
-                     callbacks=[self.handle_data],
-                     no_ack=True,
-                     accept=["json"])
-        ]
+        subscriptions = [MsgTestingToolComponentReady.routing_key]
+        super(CoreConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name,
+                                           subscriptions)
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
         log.info("Backend ready to consume data")
-        # log.info("-------------------------------------------------")
-        # log.info("Go to this URL: http://{platform}/session/{session}".format(platform=self.server_url,
-        #                                                                       session=self.session))
-        # log.info("-------------------------------------------------")
-
 
         #  let's send bootstrap message
-        msg = {
-            '_type': 'testingtool.component.ready',
-            'component': self.name,
-            "description": "Component READY to start test suite."
-        }
+        msg = MsgTestingToolComponentReady(
+            component='agent.{}'.format(self.name),
+            description="Component READY to start test suite."
+        )
 
-        producer = Producer(connection,serializer='json')
-        producer.publish(msg,
-                        exchange=self.exchange,
-                        routing_key='control.session'
-                        )
+        producer = Producer(connection, serializer='json')
+        producer.publish(
+            body=msg.to_dict(),
+            exchange=self.exchange,
+            routing_key=msg.routing_key
+        )
 
-    def handle_control(self, body, message):
-        log.debug("DEFAULT HANDLE CONTROL")
-        log.debug(("Payload", message.payload))
-        log.debug(("Properties", message.properties))
-        log.debug(("Headers", message.headers))
-        log.debug(("body", message.body))
-        msg = None
-        try:
-            msg = json.loads(body)
-            log.debug(message)
-        except ValueError as e:
-            message.ack()
-            log.error(e)
-            log.error("Incorrect message: {0}".format(body))
-
-        if msg is not None:
-            log.debug("Just received that packet")
-            log.debug(msg)
+    def _on_message(self, message):
+        self.log.debug(
+            "Consumer specialized handler <{consumer_name}> got: {message}".format(
+                consumer_name=self.consumer_name,
+                message=repr(message)
+            )
+        )
 
 
 class CoreConnector(BaseController):
