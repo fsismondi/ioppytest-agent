@@ -28,7 +28,7 @@ class CoreConsumer(BaseConsumer):
 
         #  let's send bootstrap message
         msg = MsgTestingToolComponentReady(
-            component='agent.{}'.format(self.name),
+            component=self.name,
             description="Component READY to start test suite."
         )
 
