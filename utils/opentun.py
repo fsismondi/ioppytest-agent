@@ -13,6 +13,7 @@ import sys
 from kombu import Exchange
 
 from utils import arrow_down, arrow_up, finterop_banner
+from utils.messages import *
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
@@ -493,7 +494,7 @@ class OpenTunLinux(object):
         This function forwards the data to the the EventBus.
         """
 
-        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
+        routing_key = MsgPacketSniffedRaw.routing_key.replace('*', self.name)
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
@@ -501,20 +502,19 @@ class OpenTunLinux(object):
                  % self.packet_count)
 
         # dispatch to EventBus
-        msg = {
-            "_type": "packet.sniffed.raw",
-            "interface_name": self.ifname,
-            "timestamp": str(time.time()),
-            "data": data
-        }
+        m = MsgPacketSniffedRaw(
+            interface_name=self.ifname,
+            timestamp=str(time.time()),
+            data=data
+        )
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
-                 '\n' + json.dumps(msg) +
+                 '\n' + m.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                  )
         # do not re-encode on json, producer does serialization
-        self.producer.publish(msg,
+        self.producer.publish(m.to_dict(),
                               exchange=self.exchange,
                               routing_key=routing_key)
 
@@ -704,7 +704,7 @@ class OpenTunMACOS(object):
         This function forwards the data to the the EventBus.
         """
 
-        routing_key = "data.tun.fromAgent.{name}".format(name=self.name)
+        routing_key = MsgPacketSniffedRaw.routing_key.replace('*', self.name)
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
@@ -712,20 +712,19 @@ class OpenTunMACOS(object):
                  % self.packet_count)
 
         # dispatch to EventBus
-        msg = {
-            "_type": "packet.sniffed.raw",
-            "interface_name": self.ifname,
-            "timestamp": str(time.time()),
-            "data": data
-        }
+        m = MsgPacketSniffedRaw(
+            interface_name=self.ifname,
+            timestamp=str(time.time()),
+            data=data
+        )
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                  '\n data packet TUN -> EventBus' +
-                 '\n' + json.dumps(msg) +
+                 '\n' + m.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                  )
         # do not re-encode on json, producer does serialization
-        self.producer.publish(msg,
+        self.producer.publish(m.to_dict(),
                               exchange=self.exchange,
                               routing_key=routing_key)
 

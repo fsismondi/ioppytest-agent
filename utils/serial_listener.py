@@ -58,8 +58,6 @@ class SerialListener(object):
         except Exception as e:
             log.error(e)
 
-        self.data_plane_mrkey = "data.serial.fromAgent.%s" % self.agent_name
-        self.control_plane_mrkey = "control.serial.fromAgent.%s" % self.agent_name
         self.message_read_count = 0
 
         # notify interface is opened
@@ -69,9 +67,11 @@ class SerialListener(object):
             boudrate=self.br
         )
 
-        self.producer.publish(m.to_dict(),
-                              exchange=self.exchange,
-                              routing_key=self.control_plane_mrkey)
+        self.producer.publish(
+            m.to_dict(),
+            exchange=self.exchange,
+            routing_key=messages.MsgAgentSerialStarted.routing_key.replace('*', self.agent_name)
+        )
 
     def close(self):
         self._stop = True
@@ -152,9 +152,11 @@ class SerialListener(object):
 
         self.frame_slip = ''
 
-        self.producer.publish(m.to_dict(),
-                              exchange=self.exchange,
-                              routing_key=self.data_plane_mrkey)
+        self.producer.publish(
+            m.to_dict(),
+            exchange=self.exchange,
+            routing_key="fromAgent.{agent_name}.802154.serial.packet.raw".format(agent_name=self.agent_name)
+        )
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
                  '\n data packet Serial -> EventBus' +

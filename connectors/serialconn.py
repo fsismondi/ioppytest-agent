@@ -9,19 +9,32 @@ import threading
 from connectors.base import BaseController, BaseConsumer
 from utils.serial_listener import SerialListener
 from utils import arrow_down, arrow_up, finterop_banner
+from utils.messages import *
 
-__version__ = (0, 0, 1)
+__version__ = (0, 1, 0)
 
 log = logging.getLogger(__name__)
 
 
 class SerialConsumer(BaseConsumer):
     """
-    AMQP helper
+    Serial interface consumer:
+        - Set up process which communicates with serial interface of mote through USB port
+        - transmits in and out 802.15.4 packet messages
     """
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name):
-        super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name)
+
+        self.dispatcher = {
+            MsgPacketInjectRaw: self.handle_data,
+        }
+
+        subscriptions = [
+            MsgPacketInjectRaw.routing_key.replace('*', name).replace('ip.tun', '802154.serial'),
+        ]
+
+        super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name,
+                                             subscriptions)
         self.message_count = 0
         self.output = ''
         self.serial_listener = None
@@ -49,24 +62,15 @@ class SerialConsumer(BaseConsumer):
             serial_listener_th.daemon = True
             serial_listener_th.start()
 
-
         except KeyError as e:
             logging.warning(
                 'Cannot retrieve environment variables for serial connection: '
                 'FINTEROP_CONNECTOR_SERIAL_PORT/FINTEROP_CONNECTOR_BAUDRATE '
                 'If no sniffer/injector needed for test ignore this warning ')
 
-    def handle_data(self, body, message):
+    def handle_data(self, message):
         """
-        Function that will handle serial management messages
-
-        exchange:
-        - default
-
-        example:
-        {
-
-        }
+        Forwards data packets from AMQP BUS to serial interface
 
         """
         if self.serial_port is None:
@@ -80,7 +84,7 @@ class SerialConsumer(BaseConsumer):
 
         try:
             self.output = 'c0'
-            for c in body['data']:
+            for c in message.data:
                 if format(c, '02x') == 'c0':
                     # endslip
                     self.output += 'db'
@@ -100,28 +104,9 @@ class SerialConsumer(BaseConsumer):
         print(arrow_down)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
                  '\n data packet EventBus -> Serial' +
-                 '\n' + json.dumps(body) +
+                 '\n' + message.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )
-        message.ack()
-
-
-def handle_control(self, body, message):
-    msg = None
-
-    try:
-        msg = json.loads(body)
-        log.debug(message)
-    except ValueError as e:
-        message.ack()
-        log.error(e)
-        log.error("Incorrect message: {0}".format(body))
-        return
-
-    if msg["_type"] in self.dispatcher.keys():
-        self.dispatcher[msg["_type"]](msg)
-    else:
-        log.warning("Not supported action")
 
 
 class SerialConnector(BaseController):

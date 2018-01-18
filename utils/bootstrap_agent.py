@@ -6,46 +6,49 @@ import pika
 import argparse
 import time
 
+# for using it as library and as a __main__
+try:
+    from messages import MsgAgentConfigured, MsgAgentTunStart, Message
+except:
+    from .messages import MsgAgentConfigured, MsgAgentTunStart, Message
+
 logging.getLogger('pika').setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 RETRY_PERIOD = 1
 
 
 def publish_tun_start(exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_no_forwarding=False):
-    d = {
-        "_type": "tun.start",
-        "name": agent_id,
-        "ipv6_host": ipv6_host,
-        "ipv6_prefix": ipv6_prefix,
-        "ipv6_no_forwarding": ipv6_no_forwarding
-    }
+    msg = MsgAgentTunStart(
+        name=agent_id,
+        ipv6_host=ipv6_host,
+        ipv6_prefix=ipv6_prefix,
+        ipv6_no_forwarding=ipv6_no_forwarding
+    )
 
     channel.basic_publish(
         exchange=exchange,
-        routing_key='control.tun.toAgent.%s' % agent_id,
+        routing_key=msg.routing_key.replace('*', agent_id),
         mandatory=True,
         properties=pika.BasicProperties(
             content_type='application/json',
         ),
-        body=json.dumps(d)
+        body=msg.to_json()
     )
 
 
 def publish_tun_bootrap_success(exchange, channel, agent_id):
-    d = {
-        "_type": "agent.configured",
-        "description": "Event agent successfully CONFIGURED",
-        "name": agent_id,
-    }
+    msg = MsgAgentConfigured(
+        name=agent_id,
+    )
 
     channel.basic_publish(
         exchange=exchange,
-        routing_key='control.session',
+        routing_key=MsgAgentConfigured.routing_key.replace('*', agent_id),
         mandatory=True,
         properties=pika.BasicProperties(
             content_type='application/json',
         ),
-        body=json.dumps(d)
+        body=msg.to_json()
     )
 
 
@@ -54,9 +57,9 @@ def check_response(channel, queue_name, agent_id):
     if body is not None:
 
         try:
-            body_dict = json.loads(body.decode('utf-8'))
-            print('got message: %s' % body_dict)
-            if body_dict['_type'] == "tun.started" and body_dict['name'] == agent_id:
+            msg = Message.load_from_pika(method, header, body)
+            print('got message: %s' % repr(msg))
+            if isinstance(msg, MsgAgentConfigured) and msg.name == agent_id:
                 return True
         except Exception as e:
             logging.error(str(e))
@@ -77,7 +80,8 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
 
     channel.queue_bind(exchange=amqp_exchange,
                        queue=callback_queue,
-                       routing_key='control.tun.fromAgent.%s' % agent_id)
+                       routing_key=MsgAgentConfigured.routing_key.replace('*', agent_id)
+                       )
 
     try:
         for i in range(1, 4):
