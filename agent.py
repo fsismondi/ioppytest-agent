@@ -65,44 +65,59 @@ session.
 
 Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
 
+---------------------------------------------------------------------
 Note: We assume that a session was a already created and user has url
+and it has been exported as environment variable
+
+e.g.:
+export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
+---------------------------------------------------------------------
 
 1. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs (default mode):
 
 
+\b
 command:
-
-```
-sudo python -m agent connect  
-    --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
-    --name coap_client
-```
+    sudo python -m agent connect \  
+        --url $AMQP_URL \ 
+        --name coap_client
 
 expected result:
 
 agent is connected to f-interop and now awaits bootstrap command from backend
 
+---------------------------------------------------------------------
+
 2. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs, but wants to force 
 bootstrap ( virtual interface creation, and forced IP assignation)
 
-sudo python -m agent connect  
-    --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
-    --name coap_client
-    --force-bootstrap
-    --ipv6-prefix bbbb 
-    --ipv6-host 100
+\b
+command:
+    sudo python -m agent connect  \ 
+        --url $AMQP_URL \ 
+        --name coap_client \ 
+        --force-bootstrap \ 
+        --ipv6-prefix bbbb \ 
+        --ipv6-host 100
     
 expected result:
-agent is connected to f-interop, bootstrapped, and has an assigned IPv6 (check interface with ifconfig)
+    agent is connected to f-interop, bootstrapped, and has an assigned 
+    IPv6 (check interface with ifconfig)
 
+---------------------------------------------------------------------
 continue writing this...
 
 TODO document --serial for 802.15.4 probes
 
 TODO document --router-mode for re-routing the packets to another interface
 
-For more information, visit: http://doc.f-interop.eu
-""",
+\b
+---------------------------------------------------------------------
+For exploring all "connect" command option type: python -m agent connect  --help
+For more information visit: http://doc.f-interop.eu
+---------------------------------------------------------------------
+
+"""
 
     def __init__(self):
 
@@ -110,7 +125,7 @@ For more information, visit: http://doc.f-interop.eu
 
         self.cli = click.Group(
             add_help_option=Agent.header,
-            short_help=Agent.header
+            help=Agent.header
         )
 
         self.session_url = click.Option(
