@@ -60,14 +60,46 @@ class Agent(object):
     """
 
     header = """
-F-interop agent and management tool.
+Agent (~VPN client) for connecting your implementation under test (IUT) to the private network of the remote interop 
+session.
 
-Please use the following format to connect to the f-interop server:
+Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
+
+Note: We assume that a session was a already created and user has url
+
+1. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs (default mode):
+
+
+command:
+
+```
+sudo python -m agent connect  
+    --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
+    --name coap_client
+```
+
+expected result:
+
+agent is connected to f-interop and now awaits bootstrap command from backend
+
+2. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs, but wants to force 
+bootstrap ( virtual interface creation, and forced IP assignation)
 
 sudo python -m agent connect  
     --url amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
-    --exchange myExchange
     --name coap_client
+    --force-bootstrap
+    --ipv6-prefix bbbb 
+    --ipv6-host 100
+    
+expected result:
+agent is connected to f-interop, bootstrapped, and has an assigned IPv6 (check interface with ifconfig)
+
+continue writing this...
+
+TODO document --serial for 802.15.4 probes
+
+TODO document --router-mode for re-routing the packets to another interface
 
 For more information, visit: http://doc.f-interop.eu
 """,
@@ -103,14 +135,33 @@ For more information, visit: http://doc.f-interop.eu
             param_decls=["--dump"],
             default=False,
             required=False,
-            help="[NOT YET SUPPORTED] Dump automatically data packets from event bus into pcap files.",
+            help="[NOT YET SUPPORTED] Dump automatically data packets from event bus into pcap files",
             is_flag=True)
+
+        self.force_bootstrap = click.Option(
+            param_decls=["--force-bootstrap"],
+            default=False,
+            required=False,
+            help="Force agent's bootstrap",
+            is_flag=True)
+
+        self.ipv6_prefix = click.Option(
+            param_decls=["--ipv6-prefix"],
+            default="bbbb",
+            required=False,
+            help="Prefix of IPv6 address, used only if --force-bootstrap")
+
+        self.ipv6_host = click.Option(
+            param_decls=["--ipv6-host"],
+            default="1",
+            required=False,
+            help="Host IPv6 address, used only if --force-bootstrap")
 
         self.serial_option = click.Option(
             param_decls=["--serial"],
             default=False,
             required=False,
-            help="Run agent bound to serial injector/forwarder of 802.15.4 frames .",
+            help="Run agent bound to serial injector/forwarder of 802.15.4 frames",
             is_flag=True)
 
         # Commands
@@ -123,16 +174,19 @@ For more information, visit: http://doc.f-interop.eu
                 self.session_amqp_exchange,
                 self.name_option,
                 self.dump_option,
-                self.serial_option
+                self.force_bootstrap,
+                self.ipv6_host,
+                self.ipv6_prefix,
+                self.serial_option,
             ],
-            short_help="Connect with authentication AMQP_URL, and some other basic agent configurations."
+            short_help="Connect with authentication AMQP_URL, and some other basic agent configurations"
         )
 
         self.cli.add_command(self.connect_command)
 
         self.plugins = {}
 
-    def handle_connect(self, url, exchange, name, dump, serial):
+    def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix, serial):
         """
         Authenticate USER and create agent connection to f-interop.
 
@@ -159,9 +213,13 @@ For more information, visit: http://doc.f-interop.eu
 
         if serial:
             self.plugins["serial"] = SerialConnector(**data)
+
         else:
+            # pass some extra kwargs specific to the TunConnector
+            data['force_bootstrap'] = force_bootstrap
+            data['ipv6_host'] = ipv6_host
+            data['ipv6_prefix'] = ipv6_prefix
             self.plugins["tun"] = TunConnector(**data)
-            # self.plugins["http"] = HTTPConnector(**data)
 
         for p in self.plugins.values():
             p.start()

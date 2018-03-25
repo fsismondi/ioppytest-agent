@@ -22,11 +22,12 @@ class TunConsumer(BaseConsumer):
     """
     Tun interface consumer:
         - creates tunnel interface (RAW_IP)
-        - inyects IPv6 packets comming from event bus into tun interaface
-        - sniffs and forwards packets from tun to event bus
+        - injects IPv6 packets coming from event bus into tun interface
+        - captures and forwards packets from tun interface to event bus
     """
 
-    def __init__(self, user, password, session, server, exchange, name, consumer_name):
+    def __init__(self, user, password, session, server, exchange, name, consumer_name, force_bootstrap, ipv6_host,
+                 ipv6_prefix):
         self.dispatcher = {
             MsgAgentTunStart: self.handle_start,
             MsgPacketInjectRaw: self.handle_raw_packet_to_inject,
@@ -35,11 +36,23 @@ class TunConsumer(BaseConsumer):
         self.packet_count = 0
 
         subscriptions = [
-            MsgAgentTunStart.routing_key.replace('*', name),
+            MsgAgentTunStart.routing_key.replace('*', name),  # default rkey is "toAgent.*.ip.tun.start"
             MsgPacketInjectRaw.routing_key.replace('*', name)
         ]
 
         super(TunConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name, subscriptions)
+
+        if force_bootstrap:
+            self.handle_start(
+                MsgAgentTunStart(
+                    ipv6_host=ipv6_host,
+                    ipv6_prefix=ipv6_prefix,
+                    ipv6_no_forwarding=False,
+                    ipv4_host=None,
+                    ipv4_network=None,
+                    ipv4_netmask=None,
+                )
+            )
 
     def _on_message(self, message):
         msg_type = type(message)
@@ -52,13 +65,29 @@ class TunConsumer(BaseConsumer):
         )
         self.dispatcher[msg_type](message)
 
+    def _publish_agent_tun_started_message(self):
+        assert self.tun is not None
+
+        # get config from tun
+        conf = self.tun.get_tun_configuration()
+        conf.update({'name': self.name})
+
+        # publish message in event bus
+        msg = MsgAgentTunStarted(**conf)
+        producer = Producer(self.connection, serializer='json')
+        producer.publish(
+            body=msg.to_dict(),
+            exchange=self.exchange,
+            routing_key='fromAgent.{0}.ip.tun.started'.format(self.name)
+        )
+
     def handle_start(self, msg):
         """
         Function that will handle tun start event emitted coming from backend
         """
         if self.tun is not None:
             self.log.warning('Received open tun control message, but TUN already created')
-            return
+
         else:
             self.log.info('starting tun interface')
             try:
@@ -102,23 +131,8 @@ class TunConsumer(BaseConsumer):
                 self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
                 sys.exit(1)
 
-            msg = MsgAgentTunStarted(
-                name=self.name,
-                ipv6_host=ipv6_host,
-                ipv6_prefix=ipv6_prefix,
-                ipv4_host=ipv4_host,
-                ipv4_network=ipv4_network,
-                ipv4_netmask=ipv4_netmask,
-                ipv6_no_forwarding=ipv6_no_forwarding,
-            )
-            self.log.info("Tun started. Publishing msg: %s" % repr(msg))
-
-            producer = Producer(self.connection, serializer='json')
-            producer.publish(
-                body=msg.to_dict(),
-                exchange=self.exchange,
-                routing_key='fromAgent.{0}.ip.tun.started'.format(self.name)
-            )
+        self.log.info("Tun is up. Publishing msg: %s" % repr(msg))
+        self._publish_agent_tun_started_message()
 
     def handle_raw_packet_to_inject(self, message):
         """
