@@ -385,6 +385,18 @@ class OpenTunLinux(object):
 
     # ======================== public ==========================================
 
+    def get_tun_configuration(self):
+
+        return {
+            'ipv6_prefix': self.ipv6_prefix,
+            'ipv6_host': self.ipv6_host,
+            'ipv6_no_forwarding': self.ipv6_no_forwarding,
+            'ipv4_host': self.ipv4_host,
+            'ipv4_network': self.ipv4_network,
+            'ipv4_netmask': self.ipv4_netmask,
+        }
+
+
     # def close(self):
 
     #     if self.tunReadThread:
@@ -605,6 +617,17 @@ class OpenTunMACOS(object):
             self.tunReadThread = None
 
     # ======================== public ==========================================
+
+    def get_tun_configuration(self):
+
+        return {
+            'ipv6_prefix': self.ipv6_prefix,
+            'ipv6_host': self.ipv6_host,
+            'ipv6_no_forwarding': self.ipv6_no_forwarding,
+            'ipv4_host': self.ipv4_host,
+            'ipv4_network': self.ipv4_network,
+            'ipv4_netmask': self.ipv4_netmask,
+        }
 
     # ======================== private =========================================
 

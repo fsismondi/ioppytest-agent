@@ -5,7 +5,7 @@ import json
 import logging
 from multiprocessing import Process
 
-from utils.messages import Message as EventBusMessage, MsgTestingToolComponentReady as EventBusMessageComponentReady
+from utils.messages import Message as EventBusMessage
 
 from amqp.exceptions import UnexpectedFrame
 from kombu import Connection, Queue, Exchange, Consumer
@@ -62,7 +62,7 @@ class BaseConsumer(ConsumerMixin):
     def subscribe_to_topics(self, topic_list):
         for t in topic_list:
             queue = Queue(
-                name="consumer:{name}.{consumer_name}::RKey:{rkey}".format(
+                name="consumer: {name}.{consumer_name}::RKey:{rkey}".format(
                     name=self.name,
                     consumer_name=self.consumer_name,
                     rkey=t
