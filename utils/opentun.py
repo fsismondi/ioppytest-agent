@@ -447,6 +447,9 @@ class OpenTunLinux(object):
             # ipv6_prefixStr = formatIPv6Addr(self.ipv6_prefix)
             # ipv6_hostStr = formatIPv6Addr(self.ipv6_host)
 
+            # delete any : character in the host string (old API used to define those with that char)
+            self.ipv6_host = self.ipv6_host.replace(":", "")
+
             v = os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root')
             v = os.system('ip link set ' + self.ifname + ' up')
             v = os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + self.ifname)
