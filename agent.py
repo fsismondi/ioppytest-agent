@@ -78,8 +78,8 @@ export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX
 
 \b
 command:
-    sudo python -m agent connect \  
-        --url $AMQP_URL \ 
+    sudo python -m agent connect \\
+        --url $AMQP_URL \\
         --name coap_client
 
 expected result:
@@ -93,11 +93,11 @@ bootstrap ( virtual interface creation, and forced IP assignation)
 
 \b
 command:
-    sudo python -m agent connect  \ 
-        --url $AMQP_URL \ 
-        --name coap_client \ 
-        --force-bootstrap \ 
-        --ipv6-prefix bbbb \ 
+    sudo python -m agent connect \\ 
+        --url $AMQP_URL  \\
+        --name coap_client  \\
+        --force-bootstrap  \\
+        --ipv6-prefix bbbb  \\
         --ipv6-host 100
     
 expected result:
