@@ -452,8 +452,8 @@ class OpenTunLinux(object):
 
             v = os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root')
             v = os.system('ip link set ' + self.ifname + ' up')
-            v = os.system('ip -6 addr add ' + self.ipv6_prefix + ':' + self.ipv6_host + '/64 dev ' + self.ifname)
-            v = os.system('ip -6 addr add fe80:' + self.ipv6_host + '/64 dev ' + self.ifname)
+            v = os.system('ip -6 addr add ' + self.ipv6_prefix + '::' + self.ipv6_host + '/64 dev ' + self.ifname)
+            v = os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.ifname)
 
             # v = os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname)
 
@@ -604,13 +604,7 @@ class OpenTunMACOS(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
-        log.debug("IP info")
-        log.debug('ipv6_prefix: ' + self.ipv6_prefix)
-        log.debug('ipv6_host: ' + self.ipv6_host)
-        log.debug('ipv6_no_forwarding: ' + str(self.ipv6_no_forwarding))
-        log.debug('ipv4_host: ' + self.ipv4_host)
-        log.debug('ipv4_network: ' + str(self.ipv4_network))
-        log.debug('ipv4_netmask: ' + str(self.ipv4_netmask))
+        log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
         # local variables
         self.tunIf = self._createTunIf()
