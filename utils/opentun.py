@@ -368,13 +368,7 @@ class OpenTunLinux(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
-        log.debug("IP info")
-        log.debug(self.ipv6_prefix)
-        log.debug(self.ipv6_host)
-        log.debug(self.ipv6_no_forwarding)
-        log.debug(self.ipv4_host)
-        log.debug(self.ipv4_network)
-        log.debug(self.ipv4_netmask)
+        log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
         # local variables
         self.tunIf = self._createTunIf()
@@ -519,7 +513,7 @@ class OpenTunLinux(object):
         # dispatch to EventBus
         m = MsgPacketSniffedRaw(
             interface_name=self.ifname,
-            timestamp=str(time.time()),
+            timestamp=time.time(),
             data=data
         )
         print(arrow_up)
@@ -734,7 +728,7 @@ class OpenTunMACOS(object):
         # dispatch to EventBus
         m = MsgPacketSniffedRaw(
             interface_name=self.ifname,
-            timestamp=str(time.time()),
+            timestamp=time.time(),
             data=data
         )
         print(arrow_up)
