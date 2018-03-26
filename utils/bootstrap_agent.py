@@ -37,13 +37,13 @@ def publish_tun_start(exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_
 
 
 def publish_tun_bootrap_success(exchange, channel, agent_id):
-    msg = MsgAgentConfigured(
+    msg = MsgAgentTunStart(
         name=agent_id,
     )
 
     channel.basic_publish(
         exchange=exchange,
-        routing_key=MsgAgentConfigured.routing_key.replace('*', agent_id),
+        routing_key=MsgAgentTunStarted.routing_key.replace('*', agent_id),
         mandatory=True,
         properties=pika.BasicProperties(
             content_type='application/json',
@@ -80,7 +80,7 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
 
     channel.queue_bind(exchange=amqp_exchange,
                        queue=callback_queue,
-                       routing_key=MsgAgentConfigured.routing_key.replace('*', agent_id)
+                       routing_key=MsgAgentTunStarted.routing_key.replace('*', agent_id)
                        )
 
     try:
