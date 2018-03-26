@@ -26,7 +26,7 @@ Usage:
 ------
 >>> m = MsgTestCaseSkip(testcase_id = 'some_testcase_id')
 >>> m
-MsgTestCaseSkip(_api_version = 1.0.7, description = Skip testcase, node = someNode, testcase_id = some_testcase_id, )
+MsgTestCaseSkip(_api_version = 1.0.10, description = Skip testcase, node = someNode, testcase_id = some_testcase_id, )
 >>> m.routing_key
 'testsuite.testcase.skip'
 >>> m.message_id # doctest: +SKIP
@@ -37,24 +37,24 @@ MsgTestCaseSkip(_api_version = 1.0.7, description = Skip testcase, node = someNo
 # also we can modify some of the fields (rewrite the default ones)
 >>> m = MsgTestCaseSkip(testcase_id = 'TD_COAP_CORE_03')
 >>> m
-MsgTestCaseSkip(_api_version = 1.0.7, description = Skip testcase, node = someNode, testcase_id = TD_COAP_CORE_03, )
+MsgTestCaseSkip(_api_version = 1.0.10, description = Skip testcase, node = someNode, testcase_id = TD_COAP_CORE_03, )
 >>> m.testcase_id
 'TD_COAP_CORE_03'
 
 # and even export the message in json format (for example for sending the message though the amqp event bus)
 >>> m.to_json()
-'{"_api_version": "1.0.7", "description": "Skip testcase", "node": "someNode", "testcase_id": "TD_COAP_CORE_03"}'
+'{"_api_version": "1.0.10", "description": "Skip testcase", "node": "someNode", "testcase_id": "TD_COAP_CORE_03"}'
 
 # We can use the Message class to import json into Message objects:
 >>> m=MsgTestSuiteStart()
 >>> m.routing_key
 'testsuite.start'
 >>> m.to_json()
-'{"_api_version": "1.0.7", "description": "Test suite START command"}'
+'{"_api_version": "1.0.10", "description": "Test suite START command"}'
 >>> json_message = m.to_json()
 >>> obj=Message.load(json_message,'testsuite.start', None )
 >>> obj
-MsgTestSuiteStart(_api_version = 1.0.7, description = Test suite START command, )
+MsgTestSuiteStart(_api_version = 1.0.10, description = Test suite START command, )
 >>> type(obj) # doctest: +SKIP
 <class 'messages.MsgTestSuiteStart'>
 
@@ -66,7 +66,7 @@ MsgTestSuiteStart(_api_version = 1.0.7, description = Test suite START command, 
 # the error reply (note that we pass the message of the request to build the reply):
 >>> err = MsgErrorReply(m)
 >>> err
-MsgErrorReply(_api_version = 1.0.7, error_code = None, error_message = None, ok = False, )
+MsgErrorReply(_api_version = 1.0.10, error_code = None, error_message = None, ok = False, )
 
 # properties of the message are auto-generated:
 >>> m.reply_to
@@ -86,11 +86,12 @@ MsgErrorReply(_api_version = 1.0.7, error_code = None, error_message = None, ok 
 """
 
 from collections import OrderedDict
+import logging
 import time
 import json
 import uuid
 
-API_VERSION = '1.0.7'
+API_VERSION = '1.0.10'
 
 
 class NonCompliantMessageFormatError(Exception):
@@ -200,10 +201,10 @@ class Message(object):
         >>> m.routing_key
         'sniffing.getcapture.request'
         >>> m.to_json()
-        '{"_api_version": "1.0.7", "capture_id": "TD_COAP_CORE_01"}'
+        '{"_api_version": "1.0.10", "capture_id": "TD_COAP_CORE_01"}'
         >>> json_message = m.to_json()
         >>> json_message
-        '{"_api_version": "1.0.7", "capture_id": "TD_COAP_CORE_01"}'
+        '{"_api_version": "1.0.10", "capture_id": "TD_COAP_CORE_01"}'
         >>> obj=Message.load(json_message,'testsuite.start', None )
         >>> type(obj) # doctest
         <class 'messages.MsgTestSuiteStart'>
@@ -352,7 +353,7 @@ class RoutingKeyToMessageMap:
             if self.equals(key, routing_key):
                 return self.rkey_to_message_dict[key]
         raise KeyError(
-            "Routing Key pattern not found in mapping rkey patterns -> messages table, RKEY: %s" %routing_key)
+            "Routing Key pattern not found in mapping rkey patterns -> messages table, RKEY: %s" % routing_key)
 
     @classmethod
     def equals(cls, r1, r2):
@@ -406,6 +407,11 @@ class MsgReply(Message):
                     "ok": True,
                 }
 
+            elif 'ok' not in self._msg_data_template:
+                self._msg_data_template.update({
+                    "ok": True,
+                })
+
             super(MsgReply, self).__init__(**kwargs)
 
             # overwrite correlation id template and attribute
@@ -413,9 +419,10 @@ class MsgReply(Message):
             self.correlation_id = request_message.correlation_id
 
         else:  # note this doesnt generate amqp properties
-            import logging
-            logging.warning('(!) messages library | lazy response built, generating reply message without corr_id')
             super(MsgReply, self).__init__(**kwargs)
+            logging.warning(
+                '[messages] lazy response built, generating reply message without properties for %s' % repr(self)[:70]
+            )
 
     def correlate_to(self, request_message):
         """
@@ -642,7 +649,7 @@ class MsgOrchestratorTestsGetContributorName(Message):
 
 # # # # # # GUI API messages # # # # # # # #
 
-class MsgUiReply(Message):
+class MsgUiReply(MsgReply):
     routing_key = "ui.user.all.reply"
 
     _msg_data_template = {
@@ -709,6 +716,65 @@ class MsgUiRequestSessionConfiguration(Message):
     Description: Message for requesting session information to UI
     """
     routing_key = "ui.core.session.get.request"
+
+    _msg_data_template = {
+    }
+
+
+class MsgUiSessionConfigurationReply(MsgUiReply):
+    """
+    Requirements: ...
+
+    Type: Event
+
+    Pub/Sub: UI -> TT
+
+    Description: Message for requesting session information to UI
+    """
+
+    """
+    example:
+
+    [Session message] [<class 'messages.MsgUiSessionConfigurationReply'>] 
+
+    ---------------  ---------------------------------------------------------------------------------------------------
+     login              96QOPB1H
+     testSuiteType      interoperability
+     configuration      {'testsuite.additional_session_resource': 'automated_iut-coap_server-californium'}
+     amqp_url           amqp://96QOPB1H:7OPU5N5E@mq.dev.f-interop.eu:443/396d9c99-3fd9-49dd-9515-a4ba745071c4
+     messagesRequest    {}
+     start_date         2018-01-17T13:51:31.264000+00:00
+     id                 396d9c99-3fd9-49dd-9515-a4ba745071c4
+     users              federico_sismondiojxu
+                         myslice
+     password           7OPU5N5E
+     status             open
+     _api_version
+     logs               {'date': '2018-01-17T13:45:37.438000+00:00', 'type': 'info', 'message': 'Session created loca...
+                         {'date': '2018-01-17T13:45:37.485000+00:00', 'type': 'info', 'message': 'Deploying session'}
+                         {'date': '2018-01-17T13:45:37.577000+00:00', 'type': 'info', 'message': 'Created user at Ses...
+                         {'date': '2018-01-17T13:45:38.027000+00:00', 'type': 'info', 'message': 'Created session at ...
+                         {'date': '2018-01-17T13:45:38.027000+00:00', 'type': 'info', 'message': 'Session deployed'}
+                         {'date': '2018-01-17T13:45:38.078000+00:00', 'type': 'info', 'message': 'Starting session'}
+                         {'date': '2018-01-17T13:45:39.336000+00:00', 'type': 'info', 'message': 'Session started'}
+                         {'date': '2018-01-17T13:51:04.967000+00:00', 'type': 'info', 'message': 'Stopping session'}
+                         {'date': '2018-01-17T13:51:15.665000+00:00', 'type': 'info', 'message': 'Session stopped'}
+                         {'date': '2018-01-17T13:51:15.666000+00:00', 'type': 'info', 'message': 'Messages cleared'}
+                         {'date': '2018-01-17T13:51:15.699000+00:00', 'type': 'info', 'message': 'Stop listening to t...
+                         {'date': '2018-01-17T13:51:31.264000+00:00', 'type': 'info', 'message': 'Starting session'}
+                         {'date': '2018-01-17T13:51:32.462000+00:00', 'type': 'info', 'message': 'Session started'}
+     end_date           2018-01-17T13:51:04.967000+00:00
+     shared             False
+     listen             True
+     messages
+     messagesReply
+     testSuite          http://orchestrator.dev.f-interop.eu:8181/tests/f-interop/interoperability-coap-single-user
+     messagesDisplay    {}
+     slice_id           urn:publicid:IDN+finterop:project1+slice+testing
+    ---------------  ---------------------------------------------------------------------------------------------------
+
+    """
+    routing_key = "ui.core.session.get.reply"
 
     _msg_data_template = {
     }
@@ -1118,7 +1184,7 @@ class MsgSessionLog(Message):
 
     Description: Generic descriptor of log messages
     """
-    routing_key = "log.warning.the_drummer"
+    routing_key = "log.*.*"  # e.g log.warning.the_drummer
 
     _msg_data_template = {
         "component": "misc",
@@ -1305,7 +1371,7 @@ class MsgTestCaseReady(Message):
     routing_key = "testsuite.testcase.ready"
 
     _msg_data_template = {
-        "description": "Next test case to be executed is TD_COAP_CORE_01",
+        "description": "Test case ready to start",
         "testcase_id": "TD_COAP_CORE_01",
         "testcase_ref": "http://doc.f-interop.eu/tests/TD_COAP_CORE_01",
         "objective": "Perform GET transaction(CON mode)",
@@ -1910,8 +1976,9 @@ class MsgTestSuiteReport(Message):
     routing_key = "testsuite.report"
 
     _msg_data_template = {
-        "TD_COAP_CORE_01":
+        "tc_results": [
             {
+                "testcase_id": "TD_COAP_CORE_01",
                 "verdict": "pass",
                 "description": "No interoperability error was detected,",
                 "partial_verdicts":
@@ -1935,9 +2002,8 @@ class MsgTestSuiteReport(Message):
                             "Match: CoAP(opt=Opt(CoAPOptionContentFormat()))"]
                     ]
             },
-
-        "TD_COAP_CORE_02":
             {
+                "testcase_id": "TD_COAP_CORE_02",
                 "verdict": "pass",
                 "description": "No interoperability error was detected,",
                 "partial_verdicts": [
@@ -1953,6 +2019,7 @@ class MsgTestSuiteReport(Message):
                      "<Frame   4: [bbbb::2 -> bbbb::1] CoAP [ACK 43213] 2.02 Deleted > Match: CoAP("
                      "code=66, mid=0xa8cd, tok=b'')"]]
             }
+        ]
     }
 
     # # # # # # SNIFFING SERVICES REQUEST MESSAGES # # # # # #
@@ -2473,7 +2540,7 @@ class MsgPerformanceHeartbeat(Message):
     Requirements:   Timeline Controller MUST listen to event
                     Performance submodules MUST emit event periodically
     Type:           Event
-    Typical_use:    Performance Submodules -> Timeline Controller
+    Pub/Sub:    Performance Submodules -> Timeline Controller
     Description:    The Timeline Controller verifies that all submodules are
                     active and in the correct state
     """
@@ -2487,11 +2554,10 @@ class MsgPerformanceHeartbeat(Message):
 
 class MsgPerformanceConfiguration(Message):
     """
-    Requirements:   Timeline Controller MUST listen to event
-    Type:           Event
-    Typical_use:    Orchestrator -> Timeline Controller
-    Description:    Carries the performance test configuration to the
-                    Timeline Controller
+    Requirements: Timeline Controller MUST listen to event
+    Type: Event
+    Pub/Sub: Orchestrator -> Timeline Controller
+    Description: Carries the performance test configuration to the Timeline Controller
     """
     routing_key = "performance.configuration"
 
@@ -2508,7 +2574,7 @@ class MsgPerformanceSetValues(Message):
     """
     Requirements:   Performance Submodules MUST listen to event
     Type:           Event
-    Typical_use:    Timeline Controller -> Performance Submodules
+    Pub/Sub:    Timeline Controller -> Performance Submodules
     Description:    During the test execution, the Timeline Controller will
                     periodically emit this event to the performance submodules
                     to update dynamic parameters
@@ -2520,22 +2586,92 @@ class MsgPerformanceSetValues(Message):
     }
 
 
-class MsgPerformanceStats(Message):
+# # # # # #   VIZ TOOL MESSAGES   # # # # # #
+
+class MsgVizDashboardRequest(Message):
     """
-    Requirements:   Performance Submodules SHOULD emit this event periodically
-                    Visualization module SHOULD listen to this event
-    Type:           Event
-    Typical_use:    Performance Submodules -> Visualization
-    Description:    During the test execution, the Performance Submodules
-                    will periodically emit this event carrying current
-                    performance statistics/measurements
+    Requirements:
+        - Visualization Tool MUST listen to this.
+        - Test Tools should send this message after the Visualization Tool has  confirmed the initialization
+
+    Type: Event
+    Pub/Sub: Testing Tool -> Visualization Tool
+    Description: Visualization Tool uses this message to configure the Dashboard based on the JSON config
     """
-    routing_key = "performance.stats"
+    routing_key = "viztool-grafana.set_dashboard.request"
 
     _msg_data_template = {
-        "mod_name": "unknown",
-        "timestamp": 0,
-        "stats": {},
+        "config": {}
+    }
+
+
+class MsgVizDashboardReply(MsgReply):
+    """
+    Requirements:
+        - Visualization MUST send this after recieving MsgVizDashboardRequest
+        - Test Tool MUST listen to this
+    Type: Event
+    Pub/Sub: Visualization Tool -> Testing Tool
+    Description: This message contains the URL to access the internal Webserver that serves the Grafana Instance
+    """
+    routing_key = "viztool-grafana.set_dashboard.reply"
+
+    _msg_data_template = {
+        "ok": True
+    }
+
+
+class MsgVizWrite(Message):
+    """
+    Requirements:
+        - Performance Testing Tool SHOULD emit this event periodically
+        - Visualization Tool MUST listen to this event
+    Type: Event
+    Pub/Sub: Performance Testing Tool -> Visualization
+    Description:
+        - During the test execution, the Performance Testing Tool MUST periodically emit this event carrying current performance statistics/measurements
+    """
+    routing_key = "viztool-grafana.write_data"
+
+    _msg_data_template = {
+        "measurement": "name",
+        "tags": {},
+        "time": 0,
+        "fields": {
+            "value": 0
+        }
+    }
+
+
+class MsgVizInitRequest(Message):
+    """
+    Requirements:   Implementing Test Tools should send this at start
+                    Visualization Tool MUST listen to this
+    Type:           Event
+    Pub/Sub:    Testing Tool -> Visualization Tool
+    Description:    Visualization Tool is waiting for this message
+                    to start init routines
+    """
+    routing_key = "viztool-grafana.init.request"
+
+    _msg_data_template = {
+    }
+
+
+class MsgVizInitReply(MsgReply):
+    """
+    Requirements:   Visualization MUST send this after recieving MsgVizInitRequest
+                    Test Tool MUST listen to this
+    Type:           Event
+    Pub/Sub:    Visualization Tool -> Testing Tool
+    Description:    This message contains the URL to access the internal Webserver
+                    that serves the Grafana Instance
+    """
+    routing_key = "viztool-grafana.init.reply"
+
+    _msg_data_template = {
+        "ok": True,
+        "url": "http://url-to-access-grafana:1234"
     }
 
 
@@ -2561,6 +2697,7 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
 
         # CORE API: TT <-> GUI
         "ui.core.session.get.request": MsgUiRequestSessionConfiguration,  # TT -> GUI
+        "ui.core.session.get.reply": MsgUiSessionConfigurationReply,  # GUI -> TT
         "ui.user.*.display": MsgUiDisplay,  # TT -> GUI
         "ui.user.*.request": MsgUiRequest,  # TT -> GUI
         "ui.user.*.reply": MsgUiReply,  # GUI -> TT
@@ -2654,8 +2791,15 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
         # performance testing tool: internal TT API
         "performance.heartbeat": MsgPerformanceHeartbeat,  # Perf. Submodules -> Timeline Controller
         "performance.configuration": MsgPerformanceConfiguration,  # Orchestrator -> Timeline Controller
-        "performance.stats": MsgPerformanceStats,  # Perf. Submodules -> Visualization
         "performance.setvalues": MsgPerformanceSetValues,  # Timeline Controller -> Perf. Submodules
+
+        # grafana viz tool
+        "viztool-grafana.init.request": MsgVizInitRequest,
+        "viztool-grafana.init.reply": MsgVizInitReply,
+        "viztool-grafana.set_dashboard.request": MsgVizDashboardRequest,
+        "viztool-grafana.set_dashboard.reply": MsgVizDashboardReply,
+        "viztool-grafana.write_data": MsgVizWrite,
+
     }
 )
 

@@ -8,9 +8,9 @@ import time
 
 # for using it as library and as a __main__
 try:
-    from messages import MsgAgentConfigured, MsgAgentTunStart, Message
+    from messages import MsgAgentTunStarted, MsgAgentTunStart, Message
 except:
-    from .messages import MsgAgentConfigured, MsgAgentTunStart, Message
+    from .messages import MsgAgentTunStarted, MsgAgentTunStart, Message
 
 logging.getLogger('pika').setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -59,7 +59,7 @@ def check_response(channel, queue_name, agent_id):
         try:
             msg = Message.load_from_pika(method, header, body)
             print('got message: %s' % repr(msg))
-            if isinstance(msg, MsgAgentConfigured) and msg.name == agent_id:
+            if isinstance(msg, MsgAgentTunStarted) and msg.name == agent_id:
                 return True
         except Exception as e:
             logging.error(str(e))
