@@ -14,6 +14,7 @@ from kombu.mixins import ConsumerMixin
 
 class BaseConsumer(ConsumerMixin):
     DEFAULT_EXCHANGE_NAME = "amq.topic"
+    AMQP_CONNECTION_TIMEOUT = 10
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name, topics):
         """
@@ -42,7 +43,8 @@ class BaseConsumer(ConsumerMixin):
                                                                                session=session,
                                                                                server=server)
         self.connection = Connection(self.server_url,
-                                     transport_options={'confirm_publish': True})
+                                     transport_options={'confirm_publish': True},
+                                     connect_timeout=self.AMQP_CONNECTION_TIMEOUT)
 
         if exchange:
             self.exchange = Exchange(exchange,
