@@ -105,6 +105,29 @@ expected result:
     IPv6 (check interface with ifconfig)
 
 ---------------------------------------------------------------------
+3. user runs an IPv6 based implementation which is not hosted in the same PC where the agent runs, agent then 
+adds a network route with different prefix (e.g. cccc::/64) and notifies the backend about this configuration.   
+This can be used for example when the implementation under test is a device in a 6LoWPAN network.
+
+\b
+command:
+    sudo python -m agent connect \\ 
+        --url $AMQP_URL  \\
+        --name coap_client  \\
+        --force-bootstrap  \\
+        --ipv6-prefix bbbb  \\
+        --ipv6-host 1 \\
+        --re-route-packets-if eth0 \\
+        --re-route-packets-prefix cccc \\
+        --re-route-packets-host 1
+        
+    
+expected result:
+    agent is connected to f-interop, bootstrapped, agent plays the role of a router, and hence forwards packets
+    from bbbb:: network to cccc:: network, devices in the cccc:: network should be able to ping6 devices in the
+    bbbb:: network and vice-versa.
+
+---------------------------------------------------------------------
 continue writing this...
 
 TODO document --serial for 802.15.4 probes
