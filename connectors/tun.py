@@ -45,12 +45,16 @@ class TunConsumer(BaseConsumer):
         if force_bootstrap:
             self.handle_start(
                 MsgAgentTunStart(
+                    name=name,
                     ipv6_host=ipv6_host,
                     ipv6_prefix=ipv6_prefix,
                     ipv6_no_forwarding=False,
                     ipv4_host=None,
                     ipv4_network=None,
                     ipv4_netmask=None,
+                    re_route_packets_if=None,
+                    re_route_packets_prefix=None,
+                    re_route_packets_host=None
                 )
             )
 
@@ -67,13 +71,13 @@ class TunConsumer(BaseConsumer):
 
     def _publish_agent_tun_started_message(self):
         assert self.tun is not None
-
         # get config from tun
-        conf = self.tun.get_tun_configuration()
-        conf.update({'name': self.name})
-
+        conf_params = self.tun.get_tun_configuration()
+        conf_params.update({'name': self.name})
         # publish message in event bus
-        msg = MsgAgentTunStarted(**conf)
+        msg = MsgAgentTunStarted(**conf_params)
+        logging.info('Publishing %s' % repr(msg))
+
         producer = Producer(self.connection, serializer='json')
         producer.publish(
             body=msg.to_dict(),
