@@ -36,22 +36,6 @@ def publish_tun_start(exchange, channel, agent_id, ipv6_host, ipv6_prefix, ipv6_
     )
 
 
-def publish_tun_bootrap_success(exchange, channel, agent_id):
-    msg = MsgAgentTunStart(
-        name=agent_id,
-    )
-
-    channel.basic_publish(
-        exchange=exchange,
-        routing_key=MsgAgentTunStarted.routing_key.replace('*', agent_id),
-        mandatory=True,
-        properties=pika.BasicProperties(
-            content_type='application/json',
-        ),
-        body=msg.to_json()
-    )
-
-
 def check_response(channel, queue_name, agent_id):
     method, header, body = channel.basic_get(queue=queue_name)
     if body is not None:
@@ -90,7 +74,6 @@ def bootstrap(amqp_url, amqp_exchange, agent_id, ipv6_host, ipv6_prefix, ipv6_no
             time.sleep(RETRY_PERIOD)
             if check_response(channel, agent_event_q, agent_id):
                 logging.debug("Agent tun bootstrapped")
-                publish_tun_bootrap_success(amqp_exchange, channel, agent_id)
                 break
             elif i < 3:
                 pass
