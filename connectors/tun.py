@@ -135,7 +135,6 @@ class TunConsumer(BaseConsumer):
                 self.log.error('Agent TunTap not yet supported for: {0}'.format(sys.platform))
                 sys.exit(1)
 
-        self.log.info("Tun is up. Publishing msg: %s" % repr(msg))
         self._publish_agent_tun_started_message()
 
     def handle_raw_packet_to_inject(self, message):
