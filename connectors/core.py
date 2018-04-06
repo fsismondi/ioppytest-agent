@@ -1,5 +1,5 @@
 """
-Plugin to connect to the F-interop backend
+Plugin to connect to the AMQP broker
 """
 import json
 import logging

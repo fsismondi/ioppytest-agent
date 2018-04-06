@@ -1,5 +1,5 @@
-Agent for the f-interop platform
---------------------------------
+Agent for the f-interop platform (ioppytest-agent)
+--------------------------------------------------
 
 Design
 ------
@@ -11,7 +11,6 @@ the same AMQP broker.
 Note well
 ----
 Agent is only supported by python2 -> tun librarires py2 only
-
 
 Core
 ----
@@ -179,8 +178,8 @@ tunneling all traffic through AMQP messages.
 For running the agent you will need privileges on the machine, basically
 cause we need to open a virtual interface to tunnel the packets.
 
-The command for executing it will be provided to you by F-Interop web
-GUI,it should look something like this:
+The command for executing it will be provided to you by the
+GUI or AMQP broker sys admin, it should look something like this:
 
 ```
 sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client

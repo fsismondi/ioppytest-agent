@@ -507,7 +507,7 @@ class OpenTunLinux(object):
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
-        log.info("Messaged captured in tun. Pushing message to F-Interop. Message count (uplink): %s"
+        log.info("Messaged captured in tun. Pushing message to testing tool. Message count (uplink): %s"
                  % self.packet_count)
 
         # dispatch to EventBus
@@ -722,7 +722,7 @@ class OpenTunMACOS(object):
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
-        log.info("Messaged captured in tun. Pushing message to F-Interop. Message count (uplink): %s"
+        log.info("Messaged captured in tun. Pushing message to testing tool. Message count (uplink): %s"
                  % self.packet_count)
 
         # dispatch to EventBus

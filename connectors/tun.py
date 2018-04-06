@@ -154,11 +154,11 @@ class TunConsumer(BaseConsumer):
         self.log.debug(("Data", message.data))
         self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
-        self.log.info("Message received from F-Interop. Injecting in Tun. Message count (downlink): %s"
+        self.log.info("Message received from testing tool. Injecting in Tun. Message count (downlink): %s"
                       % self.packet_count)
 
         self.tun._eventBusToTun(
-            sender="F-Interop server",
+            sender="Testing Tool",
             signal="tun inject",
             data=message.data
         )

@@ -2,29 +2,26 @@
 
 
 """
-Agent for f-interop
-*******************
+ioppytest-agent CLI:
+********************
 
 Installation
 ------------
 
-The installation for the user is supposed to be as simple as possible. Ideally, the user
-should only have the ./finterop tool installed with the relevant dependencies and should
-be ready to go.
+TBD
 
 Features of the agent
 ----------------------
 
 * The agent must be able to inject packets in the local loop or re-emit packets it receives
-  from the f-interop backend.
+  from the testing tool.
 
 * The agent MUST be able to authenticate itself with the backend.
 
 * The agent will monitor all the network traffic passing through it and send it to the backend.
 
-* The agent isn't the way the user interact with test. It simply connects to f-interop and from there receive
-instruction. All the commands send from the agent are for debugging and developing purposes and won't be enabled
-by default in the final version.
+* The agent isn't the way the user interact with test coordinator/manager. It simply connects to backend to establish a
+ sort of virtual network.
 """
 import logging
 import click
@@ -44,9 +41,7 @@ try:
 except ImportError:
     from urlparse import urlparse
 
-__version__ = (0, 1, 0)
-
-DEFAULT_PLATFORM = 'f-interop.paris.inria.fr'
+DEFAULT_PLATFORM = 'f-interop.rennes.inria.fr'
 LOGGER = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.INFO)
@@ -84,7 +79,7 @@ command:
 
 expected result:
 
-agent is connected to f-interop and now awaits bootstrap command from backend
+agent is listening to event bus and now awaits bootstrap command
 
 ---------------------------------------------------------------------
 
@@ -101,7 +96,7 @@ command:
         --ipv6-host 100
     
 expected result:
-    agent is connected to f-interop, bootstrapped, and has an assigned 
+    agent is listening to event bus, bootstrapped, and has an assigned 
     IPv6 (check interface with ifconfig)
 
 ---------------------------------------------------------------------
@@ -123,7 +118,7 @@ command:
         
     
 expected result:
-    agent is connected to f-interop, bootstrapped, agent plays the role of a router, and hence forwards packets
+    agent is listening to event bus, bootstrapped, agent plays the role of a router, and hence forwards packets
     from bbbb:: network to cccc:: network, devices in the cccc:: network should be able to ping6 devices in the
     bbbb:: network and vice-versa.
 
@@ -137,7 +132,7 @@ TODO document --router-mode for re-routing the packets to another interface
 \b
 ---------------------------------------------------------------------
 For exploring all "connect" command option type: python -m agent connect  --help
-For more information visit: http://doc.f-interop.eu
+For more information: README.md
 ---------------------------------------------------------------------
 
 """
@@ -155,7 +150,7 @@ For more information visit: http://doc.f-interop.eu
             param_decls=["--url"],
             default="amqp://guest:guest@localhost/",
             required=True,
-            help="AMQP url provided by F-Interop")
+            help="AMQP url of the session")
 
         self.session_amqp_exchange = click.Option(
             param_decls=["--exchange"],
@@ -226,7 +221,7 @@ For more information visit: http://doc.f-interop.eu
 
     def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix, serial):
         """
-        Authenticate USER and create agent connection to f-interop.
+        Authenticate USER and create agent connection to AMQP broker.
 
         """
 
