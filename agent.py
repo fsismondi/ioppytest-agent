@@ -23,6 +23,7 @@ Features of the agent
 * The agent isn't the way the user interact with test coordinator/manager. It simply connects to backend to establish a
  sort of virtual network.
 """
+import sys
 import logging
 import click
 import uuid
@@ -33,7 +34,7 @@ from connectors.core import CoreConnector
 from connectors.http import HTTPConnector
 from connectors.serialconn import SerialConnector
 
-from utils import arrow_down, arrow_up, finterop_banner
+from utils import arrow_down, arrow_up, ioppytest_banner
 from utils.packet_dumper import launch_amqp_data_to_pcap_dumper
 
 try:
@@ -55,8 +56,10 @@ class Agent(object):
     """
 
     header = """
-Agent (~VPN client) for connecting your implementation under test (IUT) to the private network of the remote interop 
-session.
+Agent (~VPN client) is a component which connects to testing tool using the AMQP bus. This component is part of the 
+ioppytest framework ecosystem. This components needs to run in the user's host and must share some kind on interface 
+with the implementation under test (IUT), it will enable the creation of a private network between all devices in the 
+session. 
 
 Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
 
@@ -139,7 +142,7 @@ For more information: README.md
 
     def __init__(self):
 
-        print(finterop_banner)
+        print(ioppytest_banner)
 
         self.cli = click.Group(
             add_help_option=Agent.header,
@@ -268,6 +271,9 @@ For more information: README.md
         self.cli()
 
 
-if __name__ == "__main__":
+def main():
     agent = Agent()
     agent.run()
+
+if __name__ == "__main__":
+    main()
