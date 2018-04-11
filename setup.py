@@ -2,6 +2,7 @@
 #     Federico Sismondi <federico.sismondi@gmail.com>
 #
 # License: ???
+from __future__ import absolute_import
 
 import io
 from setuptools import setup, find_packages
@@ -34,17 +35,15 @@ CLASSIFIERS = [
 with open("version.py", "w") as f:
     f.write("__version__ = '{}'\n".format(VERSION))
 
-
 setup(
     name=name,
-    author='fedesismo',
+    author='Federico Sismondi',
     author_email="federicosismondi@gmail.com",
     description="Component for setting up user's environment for the tests",
     version=VERSION,
-    license="??",
+    license='GPLv3+',
     classifiers=CLASSIFIERS,
-    py_modules=['agent'],
-    packages=find_packages(exclude=["tests"]),
+    packages=['agent'],
     long_description=io.open('README.md', 'r', encoding='utf-8').read(),
     install_requires=[
         'click',
@@ -54,8 +53,5 @@ setup(
         'pyserial',
         'requests',
     ],
-    entry_points={'console_scripts': [
-        'ioppytest-agent=agent:main',
-    ],
-    },
+    entry_points={'console_scripts': ['ioppytest-agent=agent.agent_cli:main']},
 )

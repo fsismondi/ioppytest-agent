@@ -23,19 +23,21 @@ Features of the agent
 * The agent isn't the way the user interact with test coordinator/manager. It simply connects to backend to establish a
  sort of virtual network.
 """
+from __future__ import absolute_import
+
 import sys
 import logging
 import click
 import uuid
 import multiprocessing
 
-from connectors.tun import TunConnector
-from connectors.core import CoreConnector
-from connectors.http import HTTPConnector
-from connectors.serialconn import SerialConnector
+from .connectors.tun import TunConnector
+from .connectors.core import CoreConnector
+from .connectors.http import HTTPConnector
+from .connectors.serialconn import SerialConnector
 
-from utils import arrow_down, arrow_up, ioppytest_banner
-from utils.packet_dumper import launch_amqp_data_to_pcap_dumper
+from .utils import arrow_down, arrow_up, ioppytest_banner
+from .utils.packet_dumper import launch_amqp_data_to_pcap_dumper
 
 try:
     from urllib.parse import urlparse
@@ -68,7 +70,7 @@ Note: We assume that a session was a already created and user has url
 and it has been exported as environment variable
 
 e.g.:
-export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
+export AMQP_URL=amqp://alfredo:zitarrosa@example.com[:port]/sessionXX 
 ---------------------------------------------------------------------
 
 1. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs (default mode):
@@ -76,7 +78,7 @@ export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX
 
 \b
 command:
-    sudo python -m agent connect \\
+    sudo -E python -m agent connect \\
         --url $AMQP_URL \\
         --name coap_client
 
@@ -91,7 +93,7 @@ bootstrap ( virtual interface creation, and forced IP assignation)
 
 \b
 command:
-    sudo python -m agent connect \\ 
+    sudo -E python -m agent connect \\ 
         --url $AMQP_URL  \\
         --name coap_client  \\
         --force-bootstrap  \\
@@ -109,7 +111,7 @@ This can be used for example when the implementation under test is a device in a
 
 \b
 command:
-    sudo python -m agent connect \\ 
+    sudo -E python -m agent connect \\ 
         --url $AMQP_URL  \\
         --name coap_client  \\
         --force-bootstrap  \\
