@@ -165,9 +165,8 @@ For more information: README.md
 
         self.name_option = click.Option(
             param_decls=["--name"],
-            default=str(uuid.uuid1()),
-            required=False,
-            help="Agent identity (default: random generated)")
+            required=True,
+            help="Agent identity, normally associated with the IUT role (coap_client, comi_server, etc)")
 
         self.dump_option = click.Option(
             param_decls=["--dump"],

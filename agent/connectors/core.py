@@ -3,10 +3,10 @@ Plugin to connect to the AMQP broker
 """
 import json
 import logging
-from utils.messages import *
 from kombu import Producer
 
 from .base import BaseController, BaseConsumer
+from ..utils.messages import MsgTestingToolComponentReady
 
 __version__ = (0, 1, 0)
 

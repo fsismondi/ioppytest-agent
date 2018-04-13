@@ -1,7 +1,6 @@
 # Author:
-#     Federico Sismondi <federico.sismondi@gmail.com>
-#
-# License: ???
+#     Federico Sismondi <federicosismondi@gmail.com>
+
 from __future__ import absolute_import
 
 import io
@@ -51,7 +50,7 @@ setup(
         'kombu',
         'pika',
         'pyserial',
-        'requests',
     ],
     entry_points={'console_scripts': ['ioppytest-agent=agent.agent_cli:main']},
 )
+

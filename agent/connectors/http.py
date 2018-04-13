@@ -1,11 +1,6 @@
 import json
-
-__version__ = (0, 1, 0)
-
 import logging
 from requests import Request, Session
-
-
 from .base import BaseController, BaseConsumer
 
 log = logging.getLogger(__name__)

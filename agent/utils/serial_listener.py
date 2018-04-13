@@ -4,10 +4,12 @@ import json
 import serial
 import logging
 import sys
-from utils import messages
+
 from kombu import Exchange
 from collections import OrderedDict
-from utils import arrow_down, arrow_up, finterop_banner
+
+from . import messages
+from . import arrow_down, arrow_up, finterop_banner
 
 STATE_OK = 0
 STATE_ESC = 1

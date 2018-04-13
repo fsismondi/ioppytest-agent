@@ -12,8 +12,8 @@ import sys
 
 from kombu import Exchange
 
-from utils import arrow_down, arrow_up, finterop_banner
-from utils.messages import *
+from . import arrow_down, arrow_up
+from . import messages
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
@@ -503,7 +503,7 @@ class OpenTunLinux(object):
         This function forwards the data to the the EventBus.
         """
 
-        routing_key = MsgPacketSniffedRaw.routing_key.replace('*', self.name)
+        routing_key = messages.MsgPacketSniffedRaw.routing_key.replace('*', self.name)
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
@@ -511,14 +511,14 @@ class OpenTunLinux(object):
                  % self.packet_count)
 
         # dispatch to EventBus
-        m = MsgPacketSniffedRaw(
+        m = messages.MsgPacketSniffedRaw(
             interface_name=self.ifname,
             timestamp=time.time(),
             data=data
         )
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
-                 '\n data packet TUN -> EventBus' +
+                 '\n data packet TUN interface -> EventBus' +
                  '\n' + m.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                  )
@@ -718,7 +718,7 @@ class OpenTunMACOS(object):
         This function forwards the data to the the EventBus.
         """
 
-        routing_key = MsgPacketSniffedRaw.routing_key.replace('*', self.name)
+        routing_key = messages.MsgPacketSniffedRaw.routing_key.replace('*', self.name)
         log.debug("Pushing message to topic: %s" % routing_key)
 
         self.packet_count += 1
@@ -726,14 +726,14 @@ class OpenTunMACOS(object):
                  % self.packet_count)
 
         # dispatch to EventBus
-        m = MsgPacketSniffedRaw(
+        m = messages.MsgPacketSniffedRaw(
             interface_name=self.ifname,
             timestamp=time.time(),
             data=data
         )
         print(arrow_up)
         log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
-                 '\n data packet TUN -> EventBus' +
+                 '\n data packet TUN interface -> EventBus' +
                  '\n' + m.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                  )

@@ -6,10 +6,10 @@ import serial
 import logging
 import threading
 
-from connectors.base import BaseController, BaseConsumer
-from utils.serial_listener import SerialListener
-from utils import arrow_down, arrow_up, finterop_banner
-from utils.messages import *
+from .base import BaseController, BaseConsumer
+from ..utils import messages
+from ..utils import arrow_down
+from ..utils.serial_listener import SerialListener
 
 __version__ = (0, 1, 0)
 
@@ -26,11 +26,11 @@ class SerialConsumer(BaseConsumer):
     def __init__(self, user, password, session, server, exchange, name, consumer_name):
 
         self.dispatcher = {
-            MsgPacketInjectRaw: self.handle_data,
+            messages.MsgPacketInjectRaw: self.handle_data,
         }
 
         subscriptions = [
-            MsgPacketInjectRaw.routing_key.replace('*', name).replace('ip.tun', '802154.serial'),
+            messages.MsgPacketInjectRaw.routing_key.replace('*', name).replace('ip.tun', '802154.serial'),
         ]
 
         super(SerialConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name,
