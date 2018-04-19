@@ -5,7 +5,7 @@ import json
 import logging
 from multiprocessing import Process
 
-from utils.messages import Message as EventBusMessage
+from ..utils.messages import Message as EventBusMessage
 
 from amqp.exceptions import UnexpectedFrame
 from kombu import Connection, Queue, Exchange, Consumer
@@ -64,7 +64,7 @@ class BaseConsumer(ConsumerMixin):
     def subscribe_to_topics(self, topic_list):
         for t in topic_list:
             queue = Queue(
-                name="consumer: {name}.{consumer_name}::RKey:{rkey}".format(
+                name="consumer: {name}.{consumer_name}?rkey={rkey}".format(
                     name=self.name,
                     consumer_name=self.consumer_name,
                     rkey=t
@@ -88,7 +88,7 @@ class BaseConsumer(ConsumerMixin):
         assert type(body) is dict  # assert that kombu deserialized it already
         json_body = json.dumps(body)
 
-        self.log.debug("DEFAULT on_message callback, got: {}".format(message.delivery_info.get('routing_key')))
+        self.log.debug("base on_message() callback, got: {}".format(message.delivery_info.get('routing_key')))
         msg = EventBusMessage.load(json_body, message.delivery_info.get('routing_key'))
         try:
             self._on_message(msg)
@@ -98,16 +98,13 @@ class BaseConsumer(ConsumerMixin):
             )
 
     def _on_message(self, message):
-        "Class to be overridden by children calss"
+        "Class to be overridden by children class"
         return NotImplementedError()
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
         # control plane info
         for q in self.queues:
-            self.log.info(
-                "Queue: {queue_name} bound to: {rkey} ".format(queue_name=q.name,
-                                                                    rkey=q.routing_key)
-            )
+            self.log.info("Queue: {queue_name} bound to: {rkey} ".format(queue_name=q.name, rkey=q.routing_key))
 
 
 class BaseController(Process):

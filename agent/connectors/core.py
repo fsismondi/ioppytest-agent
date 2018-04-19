@@ -3,10 +3,10 @@ Plugin to connect to the AMQP broker
 """
 import json
 import logging
-from utils.messages import *
 from kombu import Producer
 
 from .base import BaseController, BaseConsumer
+from ..utils.messages import MsgTestingToolComponentReady
 
 __version__ = (0, 1, 0)
 
@@ -24,7 +24,6 @@ class CoreConsumer(BaseConsumer):
                                            subscriptions)
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
-        log.info("Backend ready to consume data")
 
         #  let's send bootstrap message
         msg = MsgTestingToolComponentReady(
@@ -39,9 +38,11 @@ class CoreConsumer(BaseConsumer):
             routing_key=msg.routing_key
         )
 
+        log.info("Agent READY, listening on the event bus for ctrl messages and data packets..")
+
     def _on_message(self, message):
-        self.log.debug(
-            "Consumer specialized handler <{consumer_name}> got: {message}".format(
+        self.log.warning(
+            "<{consumer_name}> got {message}, no callback bound to it.".format(
                 consumer_name=self.consumer_name,
                 message=repr(message)
             )

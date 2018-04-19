@@ -23,18 +23,17 @@ Features of the agent
 * The agent isn't the way the user interact with test coordinator/manager. It simply connects to backend to establish a
  sort of virtual network.
 """
+from __future__ import absolute_import
+
 import logging
 import click
-import uuid
-import multiprocessing
 
-from connectors.tun import TunConnector
-from connectors.core import CoreConnector
-from connectors.http import HTTPConnector
-from connectors.serialconn import SerialConnector
+from .connectors import TunConnector
+from .connectors import CoreConnector
+from .connectors import SerialConnector
 
-from utils import arrow_down, arrow_up, finterop_banner
-from utils.packet_dumper import launch_amqp_data_to_pcap_dumper
+from .utils import ioppytest_banner
+from .utils import packet_dumper
 
 try:
     from urllib.parse import urlparse
@@ -55,8 +54,13 @@ class Agent(object):
     """
 
     header = """
-Agent (~VPN client) for connecting your implementation under test (IUT) to the private network of the remote interop 
-session.
+Agent (~VPN client) is a component which connects the environment where 
+the IUT runs to testing tool using the AMQP bus. 
+This component is part of the ioppytest framework ecosystem. 
+This components needs to run in the user's host and must share some 
+kind on interface with the implementation under test (IUT), it will 
+enable the creation of a private network between all devices in the 
+session. 
 
 Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
 
@@ -65,7 +69,7 @@ Note: We assume that a session was a already created and user has url
 and it has been exported as environment variable
 
 e.g.:
-export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX 
+export AMQP_URL=amqp://alfredo:zitarrosa@example.com[:port]/sessionXX 
 ---------------------------------------------------------------------
 
 1. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs (default mode):
@@ -73,7 +77,7 @@ export AMQP_URL=amqp://alfredo:zitarrosa@exampleRmqHost[:port]/sessionXX
 
 \b
 command:
-    sudo python -m agent connect \\
+    sudo -E python -m agent connect \\
         --url $AMQP_URL \\
         --name coap_client
 
@@ -88,7 +92,7 @@ bootstrap ( virtual interface creation, and forced IP assignation)
 
 \b
 command:
-    sudo python -m agent connect \\ 
+    sudo -E python -m agent connect \\ 
         --url $AMQP_URL  \\
         --name coap_client  \\
         --force-bootstrap  \\
@@ -106,7 +110,7 @@ This can be used for example when the implementation under test is a device in a
 
 \b
 command:
-    sudo python -m agent connect \\ 
+    sudo -E python -m agent connect \\ 
         --url $AMQP_URL  \\
         --name coap_client  \\
         --force-bootstrap  \\
@@ -139,7 +143,7 @@ For more information: README.md
 
     def __init__(self):
 
-        print(finterop_banner)
+        print(ioppytest_banner)
 
         self.cli = click.Group(
             add_help_option=Agent.header,
@@ -160,9 +164,8 @@ For more information: README.md
 
         self.name_option = click.Option(
             param_decls=["--name"],
-            default=str(uuid.uuid1()),
-            required=False,
-            help="Agent identity (default: random generated)")
+            required=True,
+            help="Agent identity, normally associated with the IUT role (coap_client, comi_server, etc)")
 
         self.dump_option = click.Option(
             param_decls=["--dump"],
@@ -261,13 +264,16 @@ For more information: README.md
             # TODO fix pcap_dumper support for py2, python3 -m utils.packet_dumper works fine tho
 
             # if dump:
-            #     dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
+            #     dump_p = multiprocessing.Process(target=packet_dumper.launch_amqp_data_to_pcap_dumper, args=())
             #     dump_p.start()
 
     def run(self):
         self.cli()
 
 
-if __name__ == "__main__":
+def main():
     agent = Agent()
     agent.run()
+
+if __name__ == "__main__":
+    main()

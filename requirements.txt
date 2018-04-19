@@ -3,4 +3,3 @@ six
 kombu
 pika
 pyserial
-requests

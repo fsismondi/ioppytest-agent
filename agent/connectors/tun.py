@@ -7,15 +7,12 @@ import json
 import logging
 import sys
 import datetime
-
-from utils.opentun import OpenTunLinux, OpenTunMACOS
-from utils import arrow_down, arrow_up, finterop_banner
-from utils.messages import *
-
 from kombu import Producer
-from connectors.base import BaseController, BaseConsumer
 
-__version__ = (0, 1, 0)
+from .base import BaseController, BaseConsumer
+from ..utils.opentun import OpenTunLinux, OpenTunMACOS
+from ..utils import arrow_up, arrow_down
+from ..utils import messages
 
 
 class TunConsumer(BaseConsumer):
@@ -29,22 +26,22 @@ class TunConsumer(BaseConsumer):
     def __init__(self, user, password, session, server, exchange, name, consumer_name, force_bootstrap, ipv6_host,
                  ipv6_prefix):
         self.dispatcher = {
-            MsgAgentTunStart: self.handle_start,
-            MsgPacketInjectRaw: self.handle_raw_packet_to_inject,
+            messages.MsgAgentTunStart: self.handle_start,
+            messages.MsgPacketInjectRaw: self.handle_raw_packet_to_inject,
         }
         self.tun = None
         self.packet_count = 0
 
         subscriptions = [
-            MsgAgentTunStart.routing_key.replace('*', name),  # default rkey is "toAgent.*.ip.tun.start"
-            MsgPacketInjectRaw.routing_key.replace('*', name)
+            messages.MsgAgentTunStart.routing_key.replace('*', name),  # default rkey is "toAgent.*.ip.tun.start"
+            messages.MsgPacketInjectRaw.routing_key.replace('*', name)
         ]
 
         super(TunConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name, subscriptions)
 
         if force_bootstrap:
             self.handle_start(
-                MsgAgentTunStart(
+                messages.MsgAgentTunStart(
                     name=name,
                     ipv6_host=ipv6_host,
                     ipv6_prefix=ipv6_prefix,
@@ -75,7 +72,7 @@ class TunConsumer(BaseConsumer):
         conf_params = self.tun.get_tun_configuration()
         conf_params.update({'name': self.name})
         # publish message in event bus
-        msg = MsgAgentTunStarted(**conf_params)
+        msg = messages.MsgAgentTunStarted(**conf_params)
         logging.info('Publishing %s' % repr(msg))
 
         producer = Producer(self.connection, serializer='json')
@@ -146,16 +143,16 @@ class TunConsumer(BaseConsumer):
             return
 
         self.packet_count += 1
-        print(arrow_down)
-        self.log.debug('\n* * * * * * HANDLE INCOMING PACKET (%s) * * * * * * *' % self.packet_count)
-        self.log.debug("TIME: %s" % datetime.datetime.time(datetime.datetime.now()))
-        self.log.debug(" - - - ")
-        self.log.debug(("Interface", message.interface_name))
-        self.log.debug(("Data", message.data))
-        self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
         self.log.info("Message received from testing tool. Injecting in Tun. Message count (downlink): %s"
                       % self.packet_count)
+
+        print(arrow_down)
+        self.log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
+                      '\n data packet EventBus -> TUN interface' +
+                      '\n' + message.to_json() +
+                      '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                      )
 
         self.tun._eventBusToTun(
             sender="Testing Tool",
