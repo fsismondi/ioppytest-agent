@@ -25,19 +25,15 @@ Features of the agent
 """
 from __future__ import absolute_import
 
-import sys
 import logging
 import click
-import uuid
-import multiprocessing
 
-from .connectors.tun import TunConnector
-from .connectors.core import CoreConnector
-from .connectors.http import HTTPConnector
-from .connectors.serialconn import SerialConnector
+from .connectors import TunConnector
+from .connectors import CoreConnector
+from .connectors import SerialConnector
 
-from .utils import arrow_down, arrow_up, ioppytest_banner
-from .utils.packet_dumper import launch_amqp_data_to_pcap_dumper
+from .utils import ioppytest_banner
+from .utils import packet_dumper
 
 try:
     from urllib.parse import urlparse
@@ -58,9 +54,12 @@ class Agent(object):
     """
 
     header = """
-Agent (~VPN client) is a component which connects to testing tool using the AMQP bus. This component is part of the 
-ioppytest framework ecosystem. This components needs to run in the user's host and must share some kind on interface 
-with the implementation under test (IUT), it will enable the creation of a private network between all devices in the 
+Agent (~VPN client) is a component which connects the environment where 
+the IUT runs to testing tool using the AMQP bus. 
+This component is part of the ioppytest framework ecosystem. 
+This components needs to run in the user's host and must share some 
+kind on interface with the implementation under test (IUT), it will 
+enable the creation of a private network between all devices in the 
 session. 
 
 Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
@@ -265,7 +264,7 @@ For more information: README.md
             # TODO fix pcap_dumper support for py2, python3 -m utils.packet_dumper works fine tho
 
             # if dump:
-            #     dump_p = multiprocessing.Process(target=launch_amqp_data_to_pcap_dumper, args=())
+            #     dump_p = multiprocessing.Process(target=packet_dumper.launch_amqp_data_to_pcap_dumper, args=())
             #     dump_p.start()
 
     def run(self):

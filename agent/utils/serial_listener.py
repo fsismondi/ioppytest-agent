@@ -8,8 +8,7 @@ import sys
 from kombu import Exchange
 from collections import OrderedDict
 
-from . import messages
-from . import arrow_down, arrow_up, finterop_banner
+from ..utils import messages
 
 STATE_OK = 0
 STATE_ESC = 1

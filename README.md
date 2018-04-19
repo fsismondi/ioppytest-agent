@@ -1,9 +1,34 @@
 Agent for the f-interop platform (ioppytest-agent)
 --------------------------------------------------
 
+About
+-----
+Agent (~VPN client) is a component which connects the environment where
+the IUT runs to testing tool using the AMQP bus.
+This component is part of the ioppytest framework ecosystem.
+This components needs to run in the user's host and must share some
+kind on interface with the implementation under test (IUT), it will
+enable the creation of a private network between all devices in the
+session.
+
+
+Installation
+------------
+
+create virtual env for not messing up your current environment
+```
+pip install virtualenv
+virtualenv -p /usr/bin/python2.7 my_venv
+source my_venv/bin/activate
+```
+
+install ioppytest-agent using pip
+```
+pip install ioppytest-agent
+```
+
 Design
 ------
-The design of the f-interop agent is modular by design.
 An agent is made of different processes that connect to AMQP message
 broker and exchange messages (in and out) with other components using
 the same AMQP broker.
@@ -19,13 +44,10 @@ charge of launching all the other components.
 If new components needs to be added they just need to be launched
 from this component.
 
-Core open the default ZMQ socket that is used by other components to
-communicate with each others.
-
 Error handling
 --------------
-When there is a Ctrl-C the agent should kill all other components and
-disconnect as gracefully as possible.
+When there is a user interrupt signal (Ctrl-C) the agent should kill
+all other components and disconnect as gracefully as possible.
 
 
 Serial mode (with 802.15.4 probe)

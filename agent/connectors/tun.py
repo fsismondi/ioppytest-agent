@@ -11,7 +11,7 @@ from kombu import Producer
 
 from .base import BaseController, BaseConsumer
 from ..utils.opentun import OpenTunLinux, OpenTunMACOS
-from ..utils import arrow_up
+from ..utils import arrow_up, arrow_down
 from ..utils import messages
 
 
@@ -147,20 +147,12 @@ class TunConsumer(BaseConsumer):
         self.log.info("Message received from testing tool. Injecting in Tun. Message count (downlink): %s"
                       % self.packet_count)
 
-        print(arrow_up)
+        print(arrow_down)
         self.log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
                       '\n data packet EventBus -> TUN interface' +
                       '\n' + message.to_json() +
                       '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                       )
-
-        # print(arrow_down)
-        # self.log.debug('\n* * * * * * HANDLE INCOMING PACKET (%s) * * * * * * *' % self.packet_count)
-        # self.log.debug("TIME: %s" % datetime.datetime.time(datetime.datetime.now()))
-        # self.log.debug(" - - - ")
-        # self.log.debug(("Interface", message.interface_name))
-        # self.log.debug(("Data", message.data))
-        # self.log.debug('\n* * * * * * * * * * * * * * * * * * * * * * *')
 
         self.tun._eventBusToTun(
             sender="Testing Tool",

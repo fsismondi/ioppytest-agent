@@ -548,7 +548,7 @@ class OpenTunLinux(object):
             # write over tuntap interface
             os.write(self.tunIf, data)
             if log.isEnabledFor(logging.DEBUG):
-                log.debug("data dispatched to tun correctly {0}, {1}".format(signal, sender))
+                log.debug("data dispatched to tun correctly, event: {0}, sender: {1}".format(signal, sender))
         except Exception as err:
             errMsg = formatCriticalMessage(err)
             log.critical(errMsg)
@@ -778,7 +778,7 @@ class OpenTunMACOS(object):
             # write over tuntap interface
             os.write(self.tunIf, data)
             if log.isEnabledFor(logging.DEBUG):
-                log.debug("data dispatched to tun correctly {0}, {1}".format(signal, sender))
+                log.debug("data dispatched to tun correctly, event: {0}, sender: {1}".format(signal, sender))
         except Exception as err:
             errMsg = formatCriticalMessage(err)
             log.critical(errMsg)
