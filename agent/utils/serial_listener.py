@@ -5,7 +5,7 @@ import logging
 import sys
 
 from kombu import Exchange
-from ..utils import messages, arrow_up
+from ..utils import messages
 
 STATE_OK = 0
 STATE_ESC = 1

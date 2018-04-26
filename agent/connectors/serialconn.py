@@ -8,7 +8,7 @@ import threading
 
 from .base import BaseController, BaseConsumer
 from ..utils import messages
-from ..utils import arrow_down
+from ..utils import arrow_down, arrow_up
 from ..utils.serial_listener import SerialListener
 
 __version__ = (0, 1, 0)
