@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import json
 import serial
 import logging
 import sys
 
 from kombu import Exchange
-from collections import OrderedDict
-
-from ..utils import messages
+from ..utils import messages, arrow_up
 
 STATE_OK = 0
 STATE_ESC = 1
