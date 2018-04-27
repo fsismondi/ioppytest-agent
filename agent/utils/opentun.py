@@ -329,7 +329,9 @@ class OpenTunLinux(object):
 
     def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
+                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
+                 re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
+                 ):
 
         # RMQ setups
         self.connection = rmq_connection
@@ -368,6 +370,10 @@ class OpenTunLinux(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
+        self.re_route_packets_if = re_route_packets_if
+        self.re_route_packets_prefix = re_route_packets_prefix
+        self.re_route_packets_host = re_route_packets_host
+
         log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
         # local variables
@@ -388,8 +394,10 @@ class OpenTunLinux(object):
             'ipv4_host': self.ipv4_host,
             'ipv4_network': self.ipv4_network,
             'ipv4_netmask': self.ipv4_netmask,
+            're_route_packets_if': self.re_route_packets_if,
+            're_route_packets_prefix': self.re_route_packets_prefix,
+            're_route_packets_host': self.re_route_packets_host,
         }
-
 
     # def close(self):
 
@@ -452,23 +460,32 @@ class OpenTunLinux(object):
             # v = os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname)
 
             # =====
-            log.info("adding static route route...")
-            # added 'metric 1' for router-compatibility constraint
-            # (show ping packet on wireshark but don't send to mote at all)
-
-            # TODO: fix hard-coded value
-
-            # os.system('ip -6 route add ' + ipv6_prefixStr + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
-            os.system('ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + self.ifname + ' metric 1')
-            # trying to set a gateway for this route
-            # os.system('ip -6 route add ' + ipv6_prefixStr + '::/64 via ' + IPv6Prefix + ':' + ipv6_hostStr + '/64')
-
-            # =====
-
             if self.ipv6_no_forwarding:
                 log.info("disabling IPv6 forwarding...")
                 os.system('echo 0 > /proc/sys/net/ipv6/conf/all/forwarding')
             else:
+
+                log.info("adding static route route...")
+                # added 'metric 1' for router-compatibility constraint
+                # (show ping packet on wireshark but don't send to mote at all)
+
+                # TODO write predefined networking diagram
+                second_optional_wsn_network_prefix = 'aaaa' if 'client' in self.name else 'cccc'
+
+                static_routes = [
+                    'ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + self.ifname + ' metric 1',
+                    'ip -6 route add ' + second_optional_wsn_network_prefix + '::/64 dev ' + self.ifname + ' metric 1'
+                ]
+
+                if self.re_route_packets_host and self.re_route_packets_if and self.re_route_packets_prefix:
+                    static_routes.append(
+                        'ip -6 route add ' + self.re_route_packets_prefix + '::/64 dev ' + self.re_route_packets_if + ' metric 1'
+                    )
+
+                for route in static_routes:
+                    log.info("trying with:" + route)
+                    os.system(route)
+
                 log.info("enabling IPv6 forwarding...")
                 os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
 
@@ -476,8 +493,8 @@ class OpenTunLinux(object):
             log.info('\ncreated following virtual interface:')
             os.system('ip addr show ' + self.ifname)
 
-            # =====start radvd
-            # os.system('radvd start')
+            log.info('\nupdate routing table:')
+            os.system('netstat -rn')
 
         except IOError as err:
             # happens when not root
@@ -561,7 +578,9 @@ class OpenTunMACOS(object):
 
     def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None):
+                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
+                 re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
+                 ):
 
         # RMQ setups
         self.connection = rmq_connection
@@ -598,6 +617,10 @@ class OpenTunMACOS(object):
             ipv4_netmask = [255, 255, 0, 0]
         self.ipv4_netmask = ipv4_netmask
 
+        self.re_route_packets_if = re_route_packets_if
+        self.re_route_packets_prefix = re_route_packets_prefix
+        self.re_route_packets_host = re_route_packets_host
+
         log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
         # local variables
@@ -618,6 +641,9 @@ class OpenTunMACOS(object):
             'ipv4_host': self.ipv4_host,
             'ipv4_network': self.ipv4_network,
             'ipv4_netmask': self.ipv4_netmask,
+            're_route_packets_if': self.re_route_packets_if,
+            're_route_packets_prefix': self.re_route_packets_prefix,
+            're_route_packets_host': self.re_route_packets_host,
         }
 
     # ======================== private =========================================
@@ -673,28 +699,46 @@ class OpenTunMACOS(object):
             v = os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
 
             # =====
-            log.info("adding static route route...")
-            # added 'metric 1' for router-compatibility constraint
-            # (show ping packet on wireshark but don't send to mote at all)
-
-            static_route = 'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname)
-            log.info("trying with:" + static_route)
-            os.system(static_route)
-
-            # trying to set a gateway for this route
-            # os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
-
-            # =====
             if self.ipv6_no_forwarding:
                 log.info("disabling IPv6 forwarding...")
                 os.system('sysctl -w net.inet6.ip6.forwarding=0')
             else:
+
+                log.info("adding static route route...")
+                # added 'metric 1' for router-compatibility constraint
+                # (show ping packet on wireshark but don't send to mote at all)
+
+                # TODO write predefined networking diagram
+                second_optional_wsn_network_prefix = 'aaaa' if 'client' in self.name else 'cccc'
+
+                static_routes = [
+                    'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname),
+                    'route add -inet6 {0}::/64 -interface {1}'.format(second_optional_wsn_network_prefix, self.ifname)
+                ]
+
+                if self.re_route_packets_host and self.re_route_packets_if and self.re_route_packets_prefix:
+                    static_routes.append(
+                        'route add -inet6 {0}::/64 -interface {1}'.format(self.re_route_packets_prefix,
+                                                                          self.re_route_packets_if)
+                    )
+
+                for route in static_routes:
+                    log.info("trying with:" + route)
+                    os.system(route)
+
+                # trying to set a gateway for this route
+                # os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
+
                 log.info("enabling IPv6 forwarding...")
                 os.system('sysctl -w net.inet6.ip6.forwarding=1')
 
             # =====
             log.info('\ncreated following virtual interface:')
             os.system('ifconfig {0}'.format(self.ifname))
+
+            log.info('\nupdate routing table:')
+            os.system('netstat -rn')
+
 
             # =====start radvd
             # os.system('radvd start')
