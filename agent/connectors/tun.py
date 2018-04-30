@@ -47,7 +47,7 @@ class TunConsumer(BaseConsumer):
                     name=name,
                     ipv6_host=ipv6_host,
                     ipv6_prefix=ipv6_prefix,
-                    ipv6_no_forwarding=True if re_route_packets_prefix and re_route_packets_host else False,
+                    ipv6_no_forwarding=False if re_route_packets_prefix and re_route_packets_host else True,
                     ipv4_host=None,
                     ipv4_network=None,
                     ipv4_netmask=None,
