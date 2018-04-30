@@ -256,9 +256,9 @@ For more information: README.md
         # validate correct use of network for client and for server when using agent as a router mode
         # TODO echo back to user diagram of expected network setup when using agent as a router features
         if re_route_packets_prefix and re_route_packets_host and re_route_packets_if:
-            if 'client' in name and re_route_packets_prefix is not 'aaaa':
+            if 'client' in name and re_route_packets_prefix != 'aaaa':
                 raise Exception('CoAP client network prefix must be aaaa::/64 when using agent as a router mode')
-            elif 'server' in name and re_route_packets_prefix is not 'cccc':
+            elif 'server' in name and re_route_packets_prefix != 'cccc':
                 raise Exception('CoAP server network prefix must be cccc::/64 when using agent as a router mode')
 
         p = urlparse(url)
