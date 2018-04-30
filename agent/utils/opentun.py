@@ -460,9 +460,11 @@ class OpenTunLinux(object):
             # v = os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname)
 
             # =====
+
+            # NOTE: touch as little as possible the OS kernel variables
             if self.ipv6_no_forwarding:
                 log.info("disabling IPv6 forwarding...")
-                os.system('echo 0 > /proc/sys/net/ipv6/conf/all/forwarding')
+                os.system('echo 0 > /proc/sys/net/ipv6/conf/{if_name}/forwarding'.format(if_name=self.ifname))
             else:
 
                 log.info("adding static route route...")
@@ -487,7 +489,7 @@ class OpenTunLinux(object):
                     os.system(route)
 
                 log.info("enabling IPv6 forwarding...")
-                os.system('echo 1 > /proc/sys/net/ipv6/conf/all/forwarding')
+                os.system('echo 1 > /proc/sys/net/ipv6/conf/{if_name}/forwarding'.format(if_name=self.ifname))
 
             # =====
             log.info('\ncreated following virtual interface:')
@@ -702,9 +704,11 @@ class OpenTunMACOS(object):
             v = os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
 
             # =====
+            # NOTE: touch as little as possible the OS kernel variables
             if self.ipv6_no_forwarding:
-                log.info("disabling IPv6 forwarding...")
-                os.system('sysctl -w net.inet6.ip6.forwarding=0')
+                pass
+                # log.info("disabling IPv6 forwarding...")
+                # os.system('sysctl -w net.inet6.ip6.forwarding=0')
             else:
 
                 log.info("adding static route route...")
