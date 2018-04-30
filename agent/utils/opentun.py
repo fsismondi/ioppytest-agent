@@ -470,7 +470,7 @@ class OpenTunLinux(object):
                 # (show ping packet on wireshark but don't send to mote at all)
 
                 # TODO write predefined networking diagram
-                second_optional_wsn_network_prefix = 'aaaa' if 'client' in self.name else 'cccc'
+                second_optional_wsn_network_prefix = 'cccc' if 'client' in self.name else 'aaaa'
 
                 static_routes = [
                     'ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + self.ifname + ' metric 1',
@@ -491,10 +491,13 @@ class OpenTunLinux(object):
 
             # =====
             log.info('\ncreated following virtual interface:')
+            log.info('-'*72)
             os.system('ip addr show ' + self.ifname)
-
+            log.info('-' * 72)
             log.info('\nupdate routing table:')
-            os.system('netstat -rn')
+            os.system('ip -6 route show')
+            log.info('-' * 72)
+            # =====
 
         except IOError as err:
             # happens when not root
@@ -709,7 +712,7 @@ class OpenTunMACOS(object):
                 # (show ping packet on wireshark but don't send to mote at all)
 
                 # TODO write predefined networking diagram
-                second_optional_wsn_network_prefix = 'aaaa' if 'client' in self.name else 'cccc'
+                second_optional_wsn_network_prefix = 'cccc' if 'client' in self.name else 'aaaa'
 
                 static_routes = [
                     'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname),
@@ -734,11 +737,13 @@ class OpenTunMACOS(object):
 
             # =====
             log.info('\ncreated following virtual interface:')
+            print('-'*72)
             os.system('ifconfig {0}'.format(self.ifname))
-
+            print('-' * 72)
             log.info('\nupdate routing table:')
-            os.system('netstat -rn')
-
+            os.system('ip -6 route show')
+            print('-' * 72)
+            # =====
 
             # =====start radvd
             # os.system('radvd start')
