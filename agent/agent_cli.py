@@ -171,7 +171,7 @@ For more information: README.md
             param_decls=["--dump"],
             default=False,
             required=False,
-            help="[NOT YET SUPPORTED] Dump automatically data packets from event bus into pcap files",
+            help="[WIP] Dump automatically data packets from event bus into pcap files",
             is_flag=True)
 
         self.force_bootstrap = click.Option(
@@ -193,6 +193,27 @@ For more information: README.md
             required=False,
             help="Host IPv6 address, used only if --force-bootstrap")
 
+        self.re_route_packets_prefix = click.Option(
+            param_decls=["--re-route-packets-prefix"],
+            default=None,
+            required=False,
+            help="Prefix of IPv6 address of the IUT living on a different network that agent's network, "
+                 "used only if --force-bootstrap")
+
+        self.re_route_packets_host = click.Option(
+            param_decls=["--re-route-packets-host"],
+            default=None,
+            required=False,
+            help="Host IPv6 address of the IUT living on a different network that agent's network, "
+                 "used only if --force-bootstrap")
+
+        self.re_route_packets_if = click.Option(
+            param_decls=["--re-route-packets-if"],
+            default=None,
+            required=False,
+            help="Network interface name of second were packets are routed to, "
+                 "used only if --force-bootstrap")
+
         self.serial_option = click.Option(
             param_decls=["--serial"],
             default=False,
@@ -213,6 +234,9 @@ For more information: README.md
                 self.force_bootstrap,
                 self.ipv6_host,
                 self.ipv6_prefix,
+                self.re_route_packets_prefix,
+                self.re_route_packets_host,
+                self.re_route_packets_if,
                 self.serial_option,
             ],
             short_help="Connect with authentication AMQP_URL, and some other basic agent configurations"
@@ -222,7 +246,8 @@ For more information: README.md
 
         self.plugins = {}
 
-    def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix, serial):
+    def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix,
+                       serial, re_route_packets_prefix, re_route_packets_host, re_route_packets_if):
         """
         Authenticate USER and create agent connection to AMQP broker.
 
@@ -255,6 +280,9 @@ For more information: README.md
             data['force_bootstrap'] = force_bootstrap
             data['ipv6_host'] = ipv6_host
             data['ipv6_prefix'] = ipv6_prefix
+            data['re_route_packets_prefix'] = re_route_packets_prefix
+            data['re_route_packets_host'] = re_route_packets_host
+            data['re_route_packets_if'] = re_route_packets_if
             self.plugins["tun"] = TunConnector(**data)
 
         for p in self.plugins.values():
