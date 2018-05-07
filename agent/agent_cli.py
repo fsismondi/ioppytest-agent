@@ -257,9 +257,11 @@ For more information: README.md
         # TODO echo back to user diagram of expected network setup when using agent as a router features
         if re_route_packets_prefix and re_route_packets_host and re_route_packets_if:
             if 'client' in name and re_route_packets_prefix != 'aaaa':
-                raise Exception('CoAP client network prefix must be aaaa::/64 when using agent as a router mode')
+                raise Exception(
+                    'Client device under test network prefix must be aaaa::/64 when using agent as a router mode')
             elif 'server' in name and re_route_packets_prefix != 'cccc':
-                raise Exception('CoAP server network prefix must be cccc::/64 when using agent as a router mode')
+                raise Exception(
+                    'Server device under test network prefix must be cccc::/64 when using agent as a router mode')
 
         p = urlparse(url)
         data = {
@@ -310,6 +312,7 @@ For more information: README.md
 def main():
     agent = Agent()
     agent.run()
+
 
 if __name__ == "__main__":
     main()
