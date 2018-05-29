@@ -6,6 +6,7 @@ import sys
 
 from kombu import Exchange
 from ..utils import messages
+from ..utils import arrow_up
 
 STATE_OK = 0
 STATE_ESC = 1
