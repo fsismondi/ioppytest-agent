@@ -6,7 +6,6 @@ import sys
 
 from kombu import Exchange
 from ..utils import messages
-from ..utils import arrow_up
 
 STATE_OK = 0
 STATE_ESC = 1
@@ -18,6 +17,49 @@ SLIP_ESC_ESC = 'dd'
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
+
+arrow_up = """
+      _
+     / \\
+    /   \\
+   /     \\
+  /       \\
+ /__     __\\   
+    |   |              _ _       _      
+    |   |             | (_)     | |         
+    |   |  _   _ _ __ | |_ _ __ | | __        
+    |   | | | | | '_ \| | | '_ \\| |/ /      
+    |   | | |_| | |_) | | | | | |   <
+    |   |  \__,_| .__/|_|_|_| |_|_|\_\\              
+    |   |       | |           
+    |   |       |_|                  
+    !___!   
+   \\  O  / 
+    \\/|\/ 
+      | 
+     / \\
+   _/   \\ _
+
+"""
+
+arrow_down = """
+    ___       
+   |   |       
+   |   |       _                     _ _       _    
+   |   |      | |                   | (_)     | |   
+   |   |    __| | _____      ___ __ | |_ _ __ | | __
+   |   |   / _` |/ _ \\ \\ /\\ / / '_ \\| | | '_ '\\| |/ /
+   |   |  | (_| | (_) \\ V  V /| | | | | | | | |   < 
+   |   |   \\__,_|\\___/ \\_/\\_/ |_| |_|_|_|_| |_|_|\_\\
+   |   | 
+ __!   !__,
+ \\       / \O
+  \\     / \/|
+   \\   /    |
+    \\ /    / \\
+     Y   _/  _\\
+"""
 
 
 class SerialListener(object):
