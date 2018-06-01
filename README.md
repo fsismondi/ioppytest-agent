@@ -16,6 +16,7 @@ Installation
 ------------
 
 create virtual env for not messing up your current environment
+
 ```
 pip install virtualenv
 virtualenv -p /usr/bin/python2.7 my_venv
@@ -23,6 +24,7 @@ source my_venv/bin/activate
 ```
 
 install ioppytest-agent using pip
+
 ```
 pip install ioppytest-agent
 ```
@@ -49,6 +51,66 @@ Error handling
 When there is a user interrupt signal (Ctrl-C) the agent should kill
 all other components and disconnect as gracefully as possible.
 
+IP tunneling mode (active-probe)
+--------------------------------
+This mode can be used for communicating two IPv6-based implementations
+tunneling all traffic through AMQP messages.
+
+## Running the agent for IP tun
+For running the agent you will need privileges on the machine, basically
+cause we need to open a virtual interface to tunnel the packets.
+
+The command for executing it will be provided to you by the
+GUI or AMQP broker sys admin, it should look something like this:
+
+```
+sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client
+```
+
+for more info
+
+```
+python agent.py --help
+python agent.py connect --help
+```
+
+
+```
+                          +----------------+
+                          |                |
+                          |   AMQP broker  |
+                          |                |
+                          |                |
+                          +----------------+
+
+
+                                ^     +
+                                |     |
+data.tun.fromAgent.agent_name   |     |  data.tun.toAgent.agent_name
+                                |     |
+                                +     v
+
+                 +---------------------------------+
+                 |                                 |
+                 |               Agent             |
+                 |                                 |
+                 |             (tun mode)          |
+                 |                                 |
+                 |                                 |
+                 |   +------tun interface--------+ |
+                 |                                 |
+                 |  +----------------------------+ |
+                 |  |         IPv6-based         | |
+                 |  |        communicating       | |
+                 |  |      piece of software     | |
+                 |  |      (e.g. coap client)    | |
+                 |  |                            | |
+                 |  +----------------------------+ |
+                 +---------------------------------+
+
+```
+
+
 
 Serial mode (with 802.15.4 probe)
 ---------------------------------
@@ -74,10 +136,11 @@ This mode can be used for connecting two remote (geographically distant)
 Active mode probe automatically ACKs messages received by the user
 device, the 802.15.4 are not forwarded to the AMQP connection.
 
-## Running the agent
+## Running the agent (serial mode) w/ active-probe
 export AMQP connection variables, and USB params for the serial connection
 
 env vars:
+
 `
 export AMQP_EXCHANGE='amq.topic'
 export AMQP_URL="amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX"
@@ -91,6 +154,7 @@ export FINTEROP_CONNECTOR_BAUDRATE=115200
 `
 
 then execute (e.g. for a coap_server running under the agent):
+
 `
 python -m agent connect  --url $AMQP_URL --name coap_server --serial
 `
@@ -138,7 +202,7 @@ data.serial.fromAgent.agent_name |     | data.serial.toAgent.agent_name
 This mode can be used for forwarding all sniffed packet in a 802.15.4 network to AMQP broker
 and eventually other tools listening to the correct routing keys/topics.
 
-## Running the agent
+## Running the agent (serial mode) w/ passive-probe
 **TBD**
 
 ```
@@ -186,66 +250,5 @@ data.serial.fromAgent.agent_name |
 |               |                               |               |
 |               |                               |               |
 +---------------+                               +---------------+
-
-```
-
-
-
-IP tunneling mode (active-probe)
---------------------------------
-This mode can be used for communicating two IPv6-based implementations
-tunneling all traffic through AMQP messages.
-
-## Running the agent
-For running the agent you will need privileges on the machine, basically
-cause we need to open a virtual interface to tunnel the packets.
-
-The command for executing it will be provided to you by the
-GUI or AMQP broker sys admin, it should look something like this:
-
-```
-sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client
-```
-
-for more info
-```
-python agent.py --help
-python agent.py connect --help
-```
-
-
-
-```
-                          +----------------+
-                          |                |
-                          |   AMQP broker  |
-                          |                |
-                          |                |
-                          +----------------+
-
-
-                                ^     +
-                                |     |
-data.tun.fromAgent.agent_name   |     |  data.tun.toAgent.agent_name
-                                |     |
-                                +     v
-
-                 +---------------------------------+
-                 |                                 |
-                 |               Agent             |
-                 |                                 |
-                 |             (tun mode)          |
-                 |                                 |
-                 |                                 |
-                 |   +------tun interface--------+ |
-                 |                                 |
-                 |  +----------------------------+ |
-                 |  |         IPv6-based         | |
-                 |  |        communicating       | |
-                 |  |      piece of software     | |
-                 |  |      (e.g. coap client)    | |
-                 |  |                            | |
-                 |  +----------------------------+ |
-                 +---------------------------------+
 
 ```
