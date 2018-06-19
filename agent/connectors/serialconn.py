@@ -77,6 +77,17 @@ class SerialConsumer(BaseConsumer):
 
         log.info('%s bootstraped.' % self.name)
 
+    def _on_message(self, message):
+        msg_type = type(message)
+        assert msg_type in self.dispatcher.keys(), 'Event message couldnt be dispatched %s' % repr(message)
+        self.log.debug(
+            "Consumer specialized handler <{consumer_name}> got: {message}".format(
+                consumer_name=self.consumer_name,
+                message=repr(message)
+            )
+        )
+        self.dispatcher[msg_type](message)
+
     def handle_data(self, message):
         """
         Forwards data packets from AMQP BUS to serial interface
