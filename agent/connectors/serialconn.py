@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import sys
 import os
 import json
 import serial
@@ -49,6 +49,15 @@ class SerialConsumer(BaseConsumer):
             log.info('FINTEROP_CONNECTOR_SERIAL_PORT env var imported: %s' % self.serial_port)
             log.info('FINTEROP_CONNECTOR_BAUDRATE env var imported: %s' % self.baudrate)
 
+        except KeyError as e:
+            logging.error(
+                'Cannot retrieve environment variables for serial connection: '
+                'FINTEROP_CONNECTOR_SERIAL_PORT/FINTEROP_CONNECTOR_BAUDRATE '
+                'please make sure these have been exported before starging agent'
+            )
+            sys.exit(1)
+
+        try:
             # open a subprocess to listen the serialport
             params = {
                 'agent_name': self.name,
@@ -62,11 +71,11 @@ class SerialConsumer(BaseConsumer):
             serial_listener_th.daemon = True
             serial_listener_th.start()
 
-        except KeyError as e:
-            logging.warning(
-                'Cannot retrieve environment variables for serial connection: '
-                'FINTEROP_CONNECTOR_SERIAL_PORT/FINTEROP_CONNECTOR_BAUDRATE '
-                'If no sniffer/injector needed for test ignore this warning ')
+        except Exception as e:
+            log.error(e)
+            sys.exit(1)
+
+        log.info('%s bootstraped.' % self.name)
 
     def handle_data(self, message):
         """

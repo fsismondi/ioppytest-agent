@@ -83,7 +83,7 @@ class SerialListener(object):
         self.state = STATE_OK
         self.frame_slip = ''
 
-        log.info("opening serial reader..")
+        log.info("opening serial reader...")
         try:
             self.ser = serial.Serial(port=self.dev,
                                      baudrate=int(self.br),
@@ -206,7 +206,7 @@ class SerialListener(object):
                  )
 
     def run(self):
-        log.info("starting serial reader thread..")
+        log.info("starting serial reader thread...")
         try:
             while not self.closed():
                 numbytes = self.ser.inWaiting()

@@ -38,7 +38,7 @@ class CoreConsumer(BaseConsumer):
             routing_key=msg.routing_key
         )
 
-        log.info("Agent READY, listening on the event bus for ctrl messages and data packets..")
+        log.info("Agent READY, listening on the event bus for ctrl messages and data packets...")
 
     def _on_message(self, message):
         self.log.warning(
