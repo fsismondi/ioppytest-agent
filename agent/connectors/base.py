@@ -99,7 +99,7 @@ class BaseConsumer(ConsumerMixin):
 
     def _on_message(self, message):
         "Class to be overridden by children class"
-        return NotImplementedError()
+        raise NotImplementedError()
 
     def on_consume_ready(self, connection, channel, consumers, wakeup=True, **kwargs):
         # control plane info
