@@ -3,3 +3,4 @@ six
 kombu
 pika
 pyserial
+past

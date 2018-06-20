@@ -10,7 +10,7 @@ import datetime
 from kombu import Producer
 
 from .base import BaseController, BaseConsumer
-from ..utils.opentun import OpenTunLinux, OpenTunMACOS
+from ..utils.opentun import OpenTunLinux, OpenTunMACOS, OpenTunWindows
 from ..utils import arrow_up, arrow_down
 from ..utils import messages
 
@@ -126,8 +126,8 @@ class TunConsumer(BaseConsumer):
             }
 
             if sys.platform.startswith('win32'):
-                self.log.error('Agent TunTap not yet supported for windows')
-                sys.exit(1)
+                self.log.info('Starting open tun [win32]')
+                self.tun = OpenTunWindows(**params)
 
             elif sys.platform.startswith('linux'):
                 self.log.info('Starting open tun [linux]')

@@ -1,5 +1,17 @@
 ﻿# -*- coding: utf-8 -*-
 
+"""
+Acknowledgements to :
+ - OPENWSN projet https://openwsn.atlassian.net
+ - GlacJAY (https://gist.github.com/glacjay) https://gist.github.com/glacjay/586892
+
+"""
+
+from __future__ import *
+
+from . import arrow_down, arrow_up
+from . import messages
+
 import json
 import logging
 import os
@@ -10,10 +22,11 @@ import traceback
 from fcntl import ioctl
 import sys
 
-from kombu import Exchange
-
-from . import arrow_down, arrow_up
-from . import messages
+if sys.platform.startswith('win32'):
+    import _winreg as reg
+    import win32file
+    import win32event
+    import pywintypes
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
@@ -244,9 +257,9 @@ def formatCrashMessage(threadName, error):
     return returnVal
 
 
-class TunReadThread(threading.Thread):
+class TunReadThreadPosix(threading.Thread):
     """
-    Thread which continously reads input from a TUN interface.
+    Thread which continuously reads input from a TUN interface.
 
     When data is received from the interface, it calls a callback configured
     during instantiation.
@@ -261,14 +274,14 @@ class TunReadThread(threading.Thread):
         self.tunIf = tunIf
         self.callback = callback
 
-        # local variables
-        self.goOn = True
+        # process event used as by parent thread
+        self.shutdown_flag = threading.Event()
 
         # initialize parent
         threading.Thread.__init__(self)
 
         # give this thread a name
-        self.name = 'TunReadThread'
+        self.name = self.__class__.__name__
 
         # check if running on MacOs, in this situation tuntap driver doesnt put the 4extra bytes
         # tested with brew install Caskroom/cask/tuntap
@@ -281,7 +294,7 @@ class TunReadThread(threading.Thread):
         try:
             p = []
 
-            while self.goOn:
+            while not self.shutdown_flag.is_set():
 
                 # wait for data
                 p = os.read(self.tunIf, self.ETHERNET_MTU)
@@ -312,20 +325,83 @@ class TunReadThread(threading.Thread):
         except Exception as err:
             errMsg = formatCrashMessage(self.name, err)
             log.critical(errMsg)
+            print("%s: bye!" % self.name)
             sys.exit(1)
 
-    # ======================== public ==========================================
 
-    def close(self):
-        self.goOn = False
+class TunReadThreadWin32(threading.Thread):
+    '''
+    Thread which continuously reads input from a TUN interface.
+
+    When data is received from the interface, it calls a callback configured
+    during instantiation.
+    '''
+
+    ETHERNET_MTU = 1500
+    IPv6_HEADER_LENGTH = 40
+
+    def __init__(self, tunIf, callback):
+
+        # store params
+        self.tunIf = tunIf
+        self.callback = callback
+
+        # local variables
+        self.goOn = True
+        self.overlappedRx = pywintypes.OVERLAPPED()
+        self.overlappedRx.hEvent = win32event.CreateEvent(None, 0, 0, None)
+
+        # initialize parent
+        threading.Thread.__init__(self)
+
+        # give this thread a name
+        self.name = 'TunReadThread'
+
+        # start myself
+        self.start()
+
+    def run(self):
+        try:
+            rxbuffer = win32file.AllocateReadBuffer(self.ETHERNET_MTU)
+
+            while self.goOn:
+
+                # wait for data
+                try:
+                    l, p = win32file.ReadFile(self.tunIf, rxbuffer, self.overlappedRx)
+                    win32event.WaitForSingleObject(self.overlappedRx.hEvent, win32event.INFINITE)
+                    self.overlappedRx.Offset = self.overlappedRx.Offset + len(p)
+                except Exception as err:
+                    print(err)
+                    log.error(err)
+                    raise ValueError('Error writing to TUN')
+                else:
+                    # convert input from a string to a byte list
+                    p = [ord(b) for b in p]
+                    # print "tun input"
+                    # print p
+                    # make sure it's an IPv6 packet (starts with 0x6x)
+                    if (p[0] & 0xf0) != 0x60:
+                        # this is not an IPv6 packet
+                        continue
+
+                    # because of the nature of tun for Windows, p contains ETHERNET_MTU
+                    # bytes. Cut at length of IPv6 packet.
+                    p = p[:self.IPv6_HEADER_LENGTH + 256 * p[4] + p[5]]
+
+                    # call the callback
+                    self.callback(p)
+
+        except Exception as err:
+            errMsg = formatCrashMessage(self.name, err)
+            log.critical(errMsg)
+            sys.exit(1)
 
 
-# TODO Create an interface class OpenTun to agregate common stuff between linux and macos
-
-class OpenTunLinux(object):
-    """
+class TunBase(object):
+    '''
     Class which interfaces between a TUN virtual interface and an EventBus.
-    """
+    '''
 
     def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
@@ -339,18 +415,17 @@ class OpenTunLinux(object):
         self.exchange = rmq_exchange
 
         self.name = name
+        self.tun_name = ''
         self.packet_count = 0
 
         if ipv6_prefix is None:
             # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
             ipv6_prefix = DEFAULT_IPV6_PREFIX
-
         self.ipv6_prefix = ipv6_prefix
 
         if ipv6_host is None:
             # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-            ipv6_host = ":1"
-
+            ipv6_host = "1"
         self.ipv6_host = ipv6_host
 
         if ipv6_no_forwarding is None:
@@ -358,8 +433,7 @@ class OpenTunLinux(object):
         self.ipv6_no_forwarding = ipv6_no_forwarding
 
         if ipv4_host is None:
-            ipv4_host = "2.2.2.2"
-
+            ipv4_host = [10, 2, 0, 1]
         self.ipv4_host = ipv4_host
 
         if ipv4_network is None:
@@ -376,12 +450,25 @@ class OpenTunLinux(object):
 
         log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
-        # local variables
-        self.tunIf = self._createTunIf()
+        # create interface
+        self.tunIf = self._create_tun_interface()
+
+        # launces thread for reading tun
         if self.tunIf:
-            self.tunReadThread = self._createTunReadThread()
+            self.tunReadThread = self._create_tun_read_thread()
         else:
             self.tunReadThread = None
+
+    def close(self):
+        logging.info("Stopping %s ..." % self.name)
+        if self.tunReadThread:
+            logging.info("Trying to stop %s ..." % self.tunReadThread.name)
+            # self.tunReadThread.terminate()
+            # logging.info("Waiting for joining %s ..." % self.tunReadThread.name)
+            # self.tunReadThread.join(timeout=10)
+            # time.sleep(1)
+            logging.info("Thread stopped %s ..." % self.tunReadThread.name)
+        sys.exit(0)
 
     # ======================== public ==========================================
 
@@ -399,37 +486,263 @@ class OpenTunLinux(object):
             're_route_packets_host': self.re_route_packets_host,
         }
 
-    # def close(self):
+    # ======================== private =========================================
 
-    #     if self.tunReadThread:
+    def _tun_to_event_bus(self, data):
+        """
+        Called when receiving data from the TUN interface.
 
-    #         self.tunReadThread.close()
+        This function forwards the data to the the EventBus.
+        """
 
-    #         # Send a packet to openTun interface to break out of blocking read.
-    #         attempts = 0
-    #         while self.tunReadThread.isAlive() and attempts < 3:
-    #             attempts += 1
-    #             try:
-    #                 log.info('Sending UDP packet to close openTun')
-    #                 sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-    #                 # Destination must route through the TUN host, but not be the host itself.
-    #                 # OK if host does not really exist.
-    #                 dst = self.ipv6_prefix + self.ipv6_host
-    #                 dst[15] += 1
-    #                 # Payload and destination port are arbitrary
-    #                 sock.sendto('stop', (formatIPv6Addr(dst),18004))
-    #                 # Give thread some time to exit
-    #                 time.sleep(0.05)
-    #             except Exception as err:
-    #                 log.error('Unable to send UDP to close tunReadThread: {0}'.join(err))
+        routing_key = messages.MsgPacketSniffedRaw.routing_key.replace('*', self.name)
+        log.debug("Pushing message to topic: %s" % routing_key)
 
+        self.packet_count += 1
+        log.info("Messaged captured in tun. Pushing message to testing tool. Message count (uplink): %s"
+                 % self.packet_count)
+
+        # dispatch to EventBus
+        m = messages.MsgPacketSniffedRaw(
+            interface_name=self.ifname,
+            timestamp=time.time(),
+            data=data
+        )
+        print(arrow_up)
+        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
+                 '\n data packet TUN interface -> EventBus' +
+                 '\n' + m.to_json() +
+                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
+                 )
+        # do not re-encode on json, producer does serialization
+        self.producer.publish(m.to_dict(),
+                              exchange=self.exchange,
+                              routing_key=routing_key)
+
+    def _get_network_prefix_notif(self, sender, signal, data):
+        return self.ipv6_prefix
+
+    def _create_tun_interface(self):
+        '''
+        Open a TUN/TAP interface and switch it to TUN mode.
+
+        :returns: The handler of the interface, which can be used for later
+            read/write operations.
+        '''
+
+        raise NotImplementedError('Child class must implement. This is OS-specific ')
+
+    def _create_tun_read_thread(self):
+        '''
+        Creates and starts the thread to read messages arriving from the
+        TUN interface.
+        '''
+
+        raise NotImplementedError('Child class must implement. This is OS-specific ')
+
+    def _event_bus_to_tun(self, sender, signal, data):
+        """
+        Called when receiving data from the EventBus.
+
+        This function forwards the data to the the TUN interface.
+        """
+
+        raise NotImplementedError('Child class must implement. This is OS-specific ')
+
+        # def close(self):
+
+        #     if self.tunReadThread:
+
+        #         self.tunReadThread.close()
+
+        #         # Send a packet to openTun interface to break out of blocking read.
+        #         attempts = 0
+        #         while self.tunReadThread.isAlive() and attempts < 3:
+        #             attempts += 1
+        #             try:
+        #                 log.info('Sending UDP packet to close openTun')
+        #                 sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        #                 # Destination must route through the TUN host, but not be the host itself.
+        #                 # OK if host does not really exist.
+        #                 dst = self.ipv6_prefix + self.ipv6_host
+        #                 dst[15] += 1
+        #                 # Payload and destination port are arbitrary
+        #                 sock.sendto('stop', (formatIPv6Addr(dst),18004))
+        #                 # Give thread some time to exit
+        #                 time.sleep(0.05)
+        #             except Exception as err:
+        #                 log.error('Unable to send UDP to close tunReadThread: {0}'.join(err))
+
+
+class OpenTunWindows(TunBase):
+    '''
+    Class which interfaces between a TUN virtual interface and an EventBus.
+    '''
+
+    @classmethod
+    def get_ctl_code(cls, device_type, function, method, access):
+        return (device_type << 16) | (access << 14) | (function << 2) | method
+
+    @classmethod
+    def get_tap_control_code(cls, request, method):
+        return cls.get_ctl_code(34, request, method, 0)
+
+    TAP_IOCTL_SET_MEDIA_STATUS = get_tap_control_code(6, 0)
+    TAP_IOCTL_CONFIG_TUN = get_tap_control_code(10, 0)
+
+    # Key in the Windows registry where to find all network interfaces (don't change, this is always the same)
+    ADAPTER_KEY = r'SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}'
+
+    # Value of the ComponentId key in the registry corresponding to your TUN interface.
+    TUNTAP_COMPONENT_ID = 'tap0901'
+
+    def __init__(self, *args, **kwargs):
+
+        # log
+        log.info("create instance")
+
+        # Windows-specific local variables
+        self.overlappedTx = pywintypes.OVERLAPPED()
+        self.overlappedTx.hEvent = win32event.CreateEvent(None, 0, 0, None)
+
+        # initialize parent class
+        super(OpenTunWindows, self).__init__(*args, **kwargs)
+
+    # ======================== public ==========================================
 
     # ======================== private =========================================
 
-    def _getNetworkPrefix_notif(self, sender, signal, data):
-        return self.ipv6_prefix
+    def _event_bus_to_tun(self, sender, signal, data):
+        '''
+        Called when receiving data from the EventBus.
 
-    def _createTunIf(self):
+        This function forwards the data to the the TUN interface.
+        '''
+
+        # convert data to string
+        data = ''.join([chr(b) for b in data])
+        # write over tuntap interface
+        try:
+            win32file.WriteFile(self.tunIf, data, self.overlappedTx)
+            win32event.WaitForSingleObject(self.overlappedTx.hEvent, win32event.INFINITE)
+            self.overlappedTx.Offset = self.overlappedTx.Offset + len(data)
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("data dispatched to tun correctly {0}, {1}".format(signal, sender))
+        except Exception as err:
+            errMsg = formatCriticalMessage(err)
+            print(errMsg)
+            log.critical(errMsg)
+
+    def _create_tun_interface(self):
+        '''
+        Open a TUN/TAP interface and switch it to TUN mode.
+
+        :returns: The handler of the interface, which can be used for later
+            read/write operations.
+        '''
+
+        # retrieve the ComponentId from the TUN/TAP interface
+        componentId = self._get_tuntap_component_id()
+
+        # create a win32file for manipulating the TUN/TAP interface
+        tunIf = win32file.CreateFile(
+            r'\\.\Global\%s.tap' % componentId,
+            win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+            win32file.FILE_SHARE_READ | win32file.FILE_SHARE_WRITE,
+            None,
+            win32file.OPEN_EXISTING,
+            win32file.FILE_ATTRIBUTE_SYSTEM | win32file.FILE_FLAG_OVERLAPPED,
+            None
+        )
+
+        # have Windows consider the interface now connected
+        win32file.DeviceIoControl(
+            tunIf,
+            self.TAP_IOCTL_SET_MEDIA_STATUS,
+            '\x01\x00\x00\x00',
+            self.MIN_DEVICEIO_BUFFER_SIZE
+        )
+
+        # prepare the parameter passed to the TAP_IOCTL_CONFIG_TUN commmand.
+        # This needs to be a 12-character long string representing
+        # - the tun interface's IPv4 address (4 characters)
+        # - the tun interface's IPv4 network address (4 characters)
+        # - the tun interface's IPv4 network mask (4 characters)
+        configTunParam = []
+        configTunParam += self.ipv4_host
+        configTunParam += self.ipv4_network
+        configTunParam += self.ipv4_netmask
+        configTunParam = ''.join([chr(b) for b in configTunParam])
+
+        # switch to TUN mode (by default the interface runs in TAP mode)
+        win32file.DeviceIoControl(
+            tunIf,
+            self.TAP_IOCTL_CONFIG_TUN,
+            configTunParam,
+            self.MIN_DEVICEIO_BUFFER_SIZE
+        )
+
+        # return the handler of the TUN interface
+        return tunIf
+
+    def _create_tun_read_thread(self):
+        '''
+        Creates and starts the thread to read messages arriving from
+        the TUN interface
+        '''
+        return TunReadThreadWin32(
+            self.tunIf,
+            self._tun_to_event_bus  # super class method
+        )
+
+    # ======================== helpers =========================================
+
+    def _get_tuntap_component_id(self):
+        '''
+        Retrieve the instance ID of the TUN/TAP interface from the Windows
+        registry,
+
+        This function loops through all the sub-entries at the following location
+        in the Windows registry: reg.HKEY_LOCAL_MACHINE, ADAPTER_KEY
+
+        It looks for one which has the 'ComponentId' key set to
+        TUNTAP_COMPONENT_ID, and returns the value of the 'NetCfgInstanceId' key.
+
+        :returns: The 'ComponentId' associated with the TUN/TAP interface, a string
+            of the form "{A9A413D7-4D1C-47BA-A3A9-92F091828881}".
+        '''
+        with reg.OpenKey(reg.HKEY_LOCAL_MACHINE, self.ADAPTER_KEY) as adapters:
+            try:
+                for i in xrange(10000):
+                    key_name = reg.EnumKey(adapters, i)
+                    with reg.OpenKey(adapters, key_name) as adapter:
+                        try:
+                            component_id = reg.QueryValueEx(adapter, 'ComponentId')[0]
+                            if component_id == self.TUNTAP_COMPONENT_ID:
+                                return reg.QueryValueEx(adapter, 'NetCfgInstanceId')[0]
+                        except WindowsError as err:
+                            pass
+            except WindowsError as err:
+                pass
+
+
+class OpenTunLinux(object):
+    """
+    Class which interfaces between a TUN virtual interface and an EventBus.
+    """
+
+    def __init__(self, *args, **kwargs):
+        # log
+        log.info("create instance")
+
+        # initialize parent class
+        super(OpenTunLinux, self).__init__(*args, **kwargs)
+
+    # ======================== public ==========================================
+
+    # ======================== private =========================================
+
+    def _create_tun_interface(self):
         """
         Open a TUN/TAP interface and switch it to TUN mode.
 
@@ -493,7 +806,7 @@ class OpenTunLinux(object):
 
             # =====
             log.info('\ncreated following virtual interface:')
-            log.info('-'*72)
+            log.info('-' * 72)
             os.system('ip addr show ' + self.ifname)
             log.info('-' * 72)
             log.info('\nupdate routing table:')
@@ -508,48 +821,17 @@ class OpenTunLinux(object):
 
         return returnVal
 
-    def _createTunReadThread(self):
+    def _create_tun_read_thread(self):
         """
         Creates and starts the thread to read messages arriving from the
         TUN interface.
         """
-        return TunReadThread(
+        return TunReadThreadPosix(
             self.tunIf,
-            self._tunToEventBus
+            self._tun_to_event_bus  # super class method  # super class
         )
 
-    def _tunToEventBus(self, data):
-        """
-        Called when receiving data from the TUN interface.
-
-        This function forwards the data to the the EventBus.
-        """
-
-        routing_key = messages.MsgPacketSniffedRaw.routing_key.replace('*', self.name)
-        log.debug("Pushing message to topic: %s" % routing_key)
-
-        self.packet_count += 1
-        log.info("Messaged captured in tun. Pushing message to testing tool. Message count (uplink): %s"
-                 % self.packet_count)
-
-        # dispatch to EventBus
-        m = messages.MsgPacketSniffedRaw(
-            interface_name=self.ifname,
-            timestamp=time.time(),
-            data=data
-        )
-        print(arrow_up)
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
-                 '\n data packet TUN interface -> EventBus' +
-                 '\n' + m.to_json() +
-                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
-                 )
-        # do not re-encode on json, producer does serialization
-        self.producer.publish(m.to_dict(),
-                              exchange=self.exchange,
-                              routing_key=routing_key)
-
-    def _eventBusToTun(self, sender, signal, data):
+    def _event_bus_to_tun(self, sender, signal, data):
         """
         Called when receiving data from the EventBus.
 
@@ -576,87 +858,19 @@ class OpenTunLinux(object):
             log.critical(errMsg)
 
 
-class OpenTunMACOS(object):
-    '''
-    Class which interfaces between a TUN virtual interface and an EventBus.
-    '''
+class OpenTunMACOS(TunBase):
+    def __init__(self, *args, **kwargs):
+        # log
+        log.info("create instance")
 
-    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
-                 re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
-                 ):
-
-        # RMQ setups
-        self.connection = rmq_connection
-        self.producer = self.connection.Producer(serializer='json')
-        self.exchange = rmq_exchange
-
-        self.name = name
-        self.tun_name = ''
-        self.packet_count = 0
-
-        if ipv6_prefix is None:
-            # self.ipv6_prefix = [0xbb, 0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-            ipv6_prefix = DEFAULT_IPV6_PREFIX
-        self.ipv6_prefix = ipv6_prefix
-
-        if ipv6_host is None:
-            # self.ipv6_host = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-            ipv6_host = "1"
-        self.ipv6_host = ipv6_host
-
-        if ipv6_no_forwarding is None:
-            ipv6_no_forwarding = False
-        self.ipv6_no_forwarding = ipv6_no_forwarding
-
-        if ipv4_host is None:
-            ipv4_host = "2.2.2.2"
-        self.ipv4_host = ipv4_host
-
-        if ipv4_network is None:
-            ipv4_network = [10, 2, 0, 0]
-        self.ipv4_network = ipv4_network
-
-        if ipv4_netmask is None:
-            ipv4_netmask = [255, 255, 0, 0]
-        self.ipv4_netmask = ipv4_netmask
-
-        self.re_route_packets_if = re_route_packets_if
-        self.re_route_packets_prefix = re_route_packets_prefix
-        self.re_route_packets_host = re_route_packets_host
-
-        log.debug("IP info: \n {}".format(self.get_tun_configuration()))
-
-        # local variables
-        self.tunIf = self._createTunIf()
-        if self.tunIf:
-            self.tunReadThread = self._createTunReadThread()
-        else:
-            self.tunReadThread = None
+        # initialize parent class
+        super(OpenTunMACOS, self).__init__(*args, **kwargs)
 
     # ======================== public ==========================================
 
-    def get_tun_configuration(self):
-
-        return {
-            'ipv6_prefix': self.ipv6_prefix,
-            'ipv6_host': self.ipv6_host,
-            'ipv6_no_forwarding': self.ipv6_no_forwarding,
-            'ipv4_host': self.ipv4_host,
-            'ipv4_network': self.ipv4_network,
-            'ipv4_netmask': self.ipv4_netmask,
-            're_route_packets_if': self.re_route_packets_if,
-            're_route_packets_prefix': self.re_route_packets_prefix,
-            're_route_packets_host': self.re_route_packets_host,
-        }
-
     # ======================== private =========================================
 
-    def _getNetworkPrefix_notif(self, sender, signal, data):
-        return self.ipv6_prefix
-
-    def _createTunIf(self):
+    def _create_tun_interface(self):
         '''
         Open a TUN/TAP interface and switch it to TUN mode.
 
@@ -741,7 +955,7 @@ class OpenTunMACOS(object):
 
             # =====
             log.info('\ncreated following virtual interface:')
-            print('-'*72)
+            print('-' * 72)
             os.system('ifconfig {0}'.format(self.ifname))
             print('-' * 72)
             log.info('\nupdate routing table:')
@@ -754,48 +968,17 @@ class OpenTunMACOS(object):
 
             return f
 
-    def _createTunReadThread(self):
+    def _create_tun_read_thread(self):
         '''
         Creates and starts the thread to read messages arriving from the
         TUN interface.
         '''
-        return TunReadThread(
+        return TunReadThreadPosix(
             self.tunIf,
-            self._tunToEventBus
+            self._tun_to_event_bus  # super class method  # super class
         )
 
-    def _tunToEventBus(self, data):
-        """
-        Called when receiving data from the TUN interface.
-
-        This function forwards the data to the the EventBus.
-        """
-
-        routing_key = messages.MsgPacketSniffedRaw.routing_key.replace('*', self.name)
-        log.debug("Pushing message to topic: %s" % routing_key)
-
-        self.packet_count += 1
-        log.info("Messaged captured in tun. Pushing message to testing tool. Message count (uplink): %s"
-                 % self.packet_count)
-
-        # dispatch to EventBus
-        m = messages.MsgPacketSniffedRaw(
-            interface_name=self.ifname,
-            timestamp=time.time(),
-            data=data
-        )
-        print(arrow_up)
-        log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
-                 '\n data packet TUN interface -> EventBus' +
-                 '\n' + m.to_json() +
-                 '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
-                 )
-        # do not re-encode on json, producer does serialization
-        self.producer.publish(m.to_dict(),
-                              exchange=self.exchange,
-                              routing_key=routing_key)
-
-    def _eventBusToTun(self, sender, signal, data):
+    def _event_bus_to_tun(self, sender, signal, data):
         """
         Called when receiving data from the EventBus.
 

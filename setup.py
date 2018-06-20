@@ -54,6 +54,7 @@ setup(
         'kombu',
         'pika',
         'pyserial',
+        'pywin32 >= 1.0;platform_system=="Windows"'
     ],
     entry_points={'console_scripts': ['ioppytest-agent=agent.agent_cli:main']},
 )
