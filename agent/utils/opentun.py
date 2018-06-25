@@ -7,8 +7,6 @@ Acknowledgements to :
 
 """
 
-from __future__ import *
-
 from . import arrow_down, arrow_up
 from . import messages
 
@@ -588,8 +586,7 @@ class OpenTunWindows(TunBase):
     def get_tap_control_code(cls, request, method):
         return cls.get_ctl_code(34, request, method, 0)
 
-    TAP_IOCTL_SET_MEDIA_STATUS = get_tap_control_code(6, 0)
-    TAP_IOCTL_CONFIG_TUN = get_tap_control_code(10, 0)
+
 
     # Key in the Windows registry where to find all network interfaces (don't change, this is always the same)
     ADAPTER_KEY = r'SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}'
@@ -598,6 +595,9 @@ class OpenTunWindows(TunBase):
     TUNTAP_COMPONENT_ID = 'tap0901'
 
     def __init__(self, *args, **kwargs):
+
+        self.TAP_IOCTL_SET_MEDIA_STATUS = self.get_tap_control_code(6, 0)
+        self.TAP_IOCTL_CONFIG_TUN = self.get_tap_control_code(10, 0)
 
         # log
         log.info("create instance")
