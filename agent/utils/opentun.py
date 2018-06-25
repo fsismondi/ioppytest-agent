@@ -586,8 +586,6 @@ class OpenTunWindows(TunBase):
     def get_tap_control_code(cls, request, method):
         return cls.get_ctl_code(34, request, method, 0)
 
-
-
     # Key in the Windows registry where to find all network interfaces (don't change, this is always the same)
     ADAPTER_KEY = r'SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}'
 
@@ -598,6 +596,7 @@ class OpenTunWindows(TunBase):
 
         self.TAP_IOCTL_SET_MEDIA_STATUS = self.get_tap_control_code(6, 0)
         self.TAP_IOCTL_CONFIG_TUN = self.get_tap_control_code(10, 0)
+        self.MIN_DEVICEIO_BUFFER_SIZE = 1
 
         # log
         log.info("create instance")
