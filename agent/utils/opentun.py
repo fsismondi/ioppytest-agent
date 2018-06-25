@@ -19,7 +19,6 @@ import struct
 import threading
 import time
 import traceback
-from fcntl import ioctl
 import sys
 
 if sys.platform.startswith('win32'):
@@ -27,6 +26,8 @@ if sys.platform.startswith('win32'):
     import win32file
     import win32event
     import pywintypes
+else:  # linux or macos
+    from fcntl import ioctl
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
 
