@@ -414,7 +414,7 @@ class TunBase(object):
         self.exchange = rmq_exchange
 
         self.name = name
-        self.tun_name = ''
+        self.ifname = None
         self.packet_count = 0
 
         if ipv6_prefix is None:
@@ -643,6 +643,8 @@ class OpenTunWindows(TunBase):
 
         # retrieve the ComponentId from the TUN/TAP interface
         componentId = self._get_tuntap_component_id()
+
+        self.ifname = '%s.tap' % componentId
 
         # create a win32file for manipulating the TUN/TAP interface
         tunIf = win32file.CreateFile(
