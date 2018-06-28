@@ -402,14 +402,35 @@ class TunBase(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, rmq_exchange="amq.topic",
+    def __init__(self, name, rmq_connection=None, rmq_exchange="amq.topic",
                  ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
                  ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
                  re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
                  ):
 
         # RMQ setups
-        self.connection = rmq_connection
+        if rmq_connection:
+            self.connection = rmq_connection
+        else:
+            from kombu import Connection
+            log.warning('No connection defined, trying to import from ENVIRONMENT the AMQP_URL var')
+            env_url = str(os.environ['AMQP_URL'])
+            if 'heartbeat' not in env_url:
+                amqp_url = '%s?%s&%s&%s&%s&%s' % (
+                    env_url,
+                    "heartbeat=0",
+                    "blocked_connection_timeout=2",
+                    "retry_delay=1",
+                    "socket_timeout=5",
+                    "connection_attempts=3"
+                )
+            else:
+                amqp_url = env_url
+
+            log.warning('No connection defined, trying to create connection')
+            self.connection = Connection(amqp_url,
+                                         transport_options={'confirm_publish': True},)
+
         self.producer = self.connection.Producer(serializer='json')
         self.exchange = rmq_exchange
 
@@ -818,7 +839,7 @@ class OpenTunLinux(object):
 
         except IOError as err:
             # happens when not root
-            log.error('WARNING: could not created tun interface. Are you root? ({0})'.format(err))
+            log.error('Could not created tun interface. Are you root? ({0})'.format(err))
             returnVal = None
 
         return returnVal

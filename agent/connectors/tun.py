@@ -126,6 +126,21 @@ class TunConsumer(BaseConsumer):
             }
 
             if sys.platform.startswith('win32'):
+                params = {
+                    'rmq_connection': None,
+                    'rmq_exchange': None,
+                    'name': self.name,
+                    'ipv6_host': ipv6_host,
+                    'ipv6_prefix': ipv6_prefix,
+                    'ipv4_host': ipv4_host,
+                    'ipv4_network': ipv4_network,
+                    'ipv4_netmask': ipv4_netmask,
+                    'ipv6_no_forwarding': ipv6_no_forwarding,
+                    're_route_packets_if': re_route_packets_if,
+                    're_route_packets_prefix': re_route_packets_prefix,
+                    're_route_packets_host': re_route_packets_host
+                }
+
                 self.log.info('Starting open tun [win32]')
                 self.tun = OpenTunWindows(**params)
 
