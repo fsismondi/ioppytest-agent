@@ -414,7 +414,11 @@ class TunBase(object):
         else:
             from kombu import Connection
             log.warning('No connection defined, trying to import from ENVIRONMENT the AMQP_URL var')
-            env_url = str(os.environ['AMQP_URL'])
+            try:
+                env_url = str(os.environ['AMQP_URL'])
+            except KeyError:
+                log.error("Please export/set the environment var AMQP_URL, then restart agent")
+                sys.exit(1)
             if 'heartbeat' not in env_url:
                 amqp_url = '%s?%s&%s&%s&%s&%s' % (
                     env_url,
