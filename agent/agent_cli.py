@@ -36,9 +36,9 @@ from .utils import ioppytest_banner
 from .utils import packet_dumper
 
 try:
-    from urllib.parse import urlparse
+    from urlparse import urlparse  # py2
 except ImportError:
-    from urlparse import urlparse
+    from urllib.parse import urlparse  # py3
 
 DEFAULT_PLATFORM = 'f-interop.rennes.inria.fr'
 LOGGER = logging.getLogger(__name__)

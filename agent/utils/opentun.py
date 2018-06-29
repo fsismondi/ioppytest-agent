@@ -413,26 +413,34 @@ class TunBase(object):
             self.connection = rmq_connection
         else:
             from kombu import Connection
+            from urlparse import urlparse  # py2 only
+
             log.warning('No connection defined, trying to import from ENVIRONMENT the AMQP_URL var')
             try:
                 env_url = str(os.environ['AMQP_URL'])
+                p = urlparse(env_url)
+                # iterate over url's query part
+                # keep only connection_timeout as url query, the rest of query params are not accepted by kombu
+                query = "connection_timeout=5"
+                for i in p.query.split('&'):
+                    if i.startswith("connection_timeout"):
+                        query = i
+                        break
+
+                kombu_url = "amqp://{user}:{password}@{hostname}:{port}/{virtual_host}?{query}".format(
+                    user=p.username,
+                    password=p.password,
+                    hostname=p.hostname,
+                    port=p.port,
+                    virtual_host=p.path.strip('/'),
+                    query=query)
+
             except KeyError:
                 log.error("Please export/set the environment var AMQP_URL, then restart agent")
                 sys.exit(1)
-            if 'heartbeat' not in env_url:
-                amqp_url = '%s?%s&%s&%s&%s&%s' % (
-                    env_url,
-                    "heartbeat=0",
-                    "blocked_connection_timeout=2",
-                    "retry_delay=1",
-                    "socket_timeout=5",
-                    "connection_attempts=3"
-                )
-            else:
-                amqp_url = env_url
 
             log.warning('No connection defined, trying to create connection')
-            self.connection = Connection(amqp_url,
+            self.connection = Connection(kombu_url,
                                          transport_options={'confirm_publish': True},)
 
         self.producer = self.connection.Producer(serializer='json')
