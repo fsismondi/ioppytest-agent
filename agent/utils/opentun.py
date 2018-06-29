@@ -435,13 +435,15 @@ class TunBase(object):
                     virtual_host=p.path.strip('/'),
                     query=query)
 
+                log.info('trying to connect with URL: %s' % kombu_url)
+
             except KeyError:
                 log.error("Please export/set the environment var AMQP_URL, then restart agent")
                 sys.exit(1)
 
             log.warning('No connection defined, trying to create connection')
             self.connection = Connection(kombu_url,
-                                         transport_options={'confirm_publish': True},)
+                                         transport_options={'confirm_publish': True}, )
 
         self.producer = self.connection.Producer(serializer='json')
         self.exchange = rmq_exchange
