@@ -11,6 +11,15 @@ kind on interface with the implementation under test (IUT), it will
 enable the creation of a private network between all devices in the
 session.
 
+OS requirements
+---------------
+
+This component has been tested with MacOs and Ubuntu (v15.04 or +).
+Windows OS (yet) are not supported.
+For Ubuntu 17.04 or +, you need to install iproute2:
+
+`apt-get -y -qq install iproute2`
+
 
 Installation
 ------------

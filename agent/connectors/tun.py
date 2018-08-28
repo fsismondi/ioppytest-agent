@@ -70,15 +70,23 @@ class TunConsumer(BaseConsumer):
 
     def _publish_agent_tun_started_message(self):
         assert self.tun is not None
+
+        def errback(exc, interval):
+            self.log.error('Error: %r', exc, exc_info=1)
+            self.log.info('Retry in %s seconds.', interval)
+
         # get config from tun
         conf_params = self.tun.get_tun_configuration()
         conf_params.update({'name': self.name})
+
         # publish message in event bus
         msg = messages.MsgAgentTunStarted(**conf_params)
-        logging.info('Publishing %s' % repr(msg))
+        self.log.debug('Publishing %s' % repr(msg))
 
         producer = Producer(self.connection, serializer='json')
-        producer.publish(
+        publish = self.connection.ensure(producer, producer.publish, errback=errback, max_retries=3)
+
+        publish(
             body=msg.to_dict(),
             exchange=self.exchange,
             routing_key='fromAgent.{0}.ip.tun.started'.format(self.name)
