@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 MAJOR = 0
 MINOR = 1
-PATCH = 16
+PATCH = 17
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 name = 'ioppytest-agent'
