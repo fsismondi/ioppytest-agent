@@ -5,17 +5,17 @@
 About the library:
 -----------------
 
-This module provides the API message formats used in F-Interop.
+This module provides the API message formats used by ioppytest test framework.
 
 The idea is to be able to have an
 - organized and centralized way of dealing with the big amount of messages formats used in the platform;
-- to be able to import (or just copy/paste) these messages formats from any component in the F-Interop platform,
-- re-use this also for the integration testing;
+- to be able to import (or just copy/paste) these messages for interacting with components on the event bus ,
+- re-use this also for the interactinggration testing;
 - to have version control the messages e.g. messages_testcase_start API v1 and API v2;
 - to have a direct way of exporting this as doc.
 
 
-F-Interop conventions:
+Some conventions:
 ---------------------
 - if event is a service request then the routing key (r_key) is someRpcExecutionEvent.request
 - a reply to a service will be on topic/r_key : someRpcExecutionEvent.reply
@@ -26,7 +26,7 @@ Usage:
 ------
 >>> m = MsgTestCaseSkip(testcase_id = 'some_testcase_id')
 >>> m
-MsgTestCaseSkip(_api_version = 1.0.15, description = Skip testcase, node = someNode, testcase_id = some_testcase_id, )
+MsgTestCaseSkip(_api_version = 1.2.14, description = Skip testcase, node = someNode, testcase_id = some_testcase_id, )
 >>> m.routing_key
 'testsuite.testcase.skip'
 >>> m.message_id # doctest: +SKIP
@@ -37,24 +37,24 @@ MsgTestCaseSkip(_api_version = 1.0.15, description = Skip testcase, node = someN
 # also we can modify some of the fields (rewrite the default ones)
 >>> m = MsgTestCaseSkip(testcase_id = 'TD_COAP_CORE_03')
 >>> m
-MsgTestCaseSkip(_api_version = 1.0.15, description = Skip testcase, node = someNode, testcase_id = TD_COAP_CORE_03, )
+MsgTestCaseSkip(_api_version = 1.2.14, description = Skip testcase, node = someNode, testcase_id = TD_COAP_CORE_03, )
 >>> m.testcase_id
 'TD_COAP_CORE_03'
 
 # and even export the message in json format (for example for sending the message though the amqp event bus)
 >>> m.to_json()
-'{"_api_version": "1.0.15", "description": "Skip testcase", "node": "someNode", "testcase_id": "TD_COAP_CORE_03"}'
+'{"_api_version": "1.2.14", "description": "Skip testcase", "node": "someNode", "testcase_id": "TD_COAP_CORE_03"}'
 
 # We can use the Message class to import json into Message objects:
 >>> m=MsgTestSuiteStart()
 >>> m.routing_key
 'testsuite.start'
 >>> m.to_json()
-'{"_api_version": "1.0.15", "description": "Test suite START command"}'
+'{"_api_version": "1.2.14", "description": "Test suite START command"}'
 >>> json_message = m.to_json()
 >>> obj=Message.load(json_message,'testsuite.start', None )
 >>> obj
-MsgTestSuiteStart(_api_version = 1.0.15, description = Test suite START command, )
+MsgTestSuiteStart(_api_version = 1.2.14, description = Test suite START command, )
 >>> type(obj) # doctest: +SKIP
 <class 'messages.MsgTestSuiteStart'>
 
@@ -66,7 +66,7 @@ MsgTestSuiteStart(_api_version = 1.0.15, description = Test suite START command,
 # the error reply (note that we pass the message of the request to build the reply):
 >>> err = MsgErrorReply(m)
 >>> err
-MsgErrorReply(_api_version = 1.0.15, error_code = None, error_message = None, ok = False, )
+MsgErrorReply(_api_version = 1.2.14, error_code = None, error_message = None, ok = False, )
 
 # properties of the message are auto-generated:
 >>> m.reply_to
@@ -82,16 +82,16 @@ MsgErrorReply(_api_version = 1.0.15, error_code = None, error_message = None, ok
 >>> err.get_properties() # doctest: +SKIP
 '{'timestamp': 1515172549, 'correlation_id': '16257581-06be-4088-a1f6-5672cc73d8f2', 'message_id': '1ec12c2b-33c7-44ad-97b8-5099c4d52e81', 'content_type': 'application/json'}'
 
-
 """
-
 from collections import OrderedDict
 import logging
 import time
 import json
 import uuid
 
-API_VERSION = '1.0.15'
+logger = logging.getLogger(__name__)
+
+API_VERSION = '1.2.14'
 
 
 class NonCompliantMessageFormatError(Exception):
@@ -201,16 +201,20 @@ class Message(object):
         >>> m.routing_key
         'sniffing.getcapture.request'
         >>> m.to_json()
-        '{"_api_version": "1.0.15", "capture_id": "TD_COAP_CORE_01"}'
+        '{"_api_version": "1.2.14", "capture_id": "TD_COAP_CORE_01"}'
         >>> json_message = m.to_json()
         >>> json_message
-        '{"_api_version": "1.0.15", "capture_id": "TD_COAP_CORE_01"}'
+        '{"_api_version": "1.2.14", "capture_id": "TD_COAP_CORE_01"}'
         >>> obj=Message.load(json_message,'testsuite.start', None )
         >>> type(obj) # doctest
         <class 'messages.MsgTestSuiteStart'>
 
 
         """
+
+        assert type(json_body) is str
+        assert type(routing_key) is str
+
         global rk_pattern_to_message_type_map
 
         props_dict = {}
@@ -219,14 +223,13 @@ class Message(object):
         try:
             message_type = rk_pattern_to_message_type_map.get_message_type(routing_key)
         except KeyError as e:
-            raise NonCompliantMessageFormatError("ROUTING KEY PATTERN not recogized for RKEY=%s \nBODY=%s" %
-                                                 (routing_key, json_body))
+            raise NonCompliantMessageFormatError("Routing key pattern not recogized for RKEY=%s" % routing_key)
 
         # build message skeleton (all fields as None)
         default_values_dict = message_type().to_dict()
         payload_dict = dict.fromkeys(default_values_dict.keys(), None)
 
-        # fill messages from provided json
+        # fill message body from provided json
         payload_dict.update(json.loads(json_body))
         built_message = message_type(**payload_dict)
 
@@ -241,6 +244,7 @@ class Message(object):
         # let's update the messages properties
         if properties:
             built_message.update_properties(**props_dict)
+        built_message.routing_key = routing_key
 
         return built_message
 
@@ -265,7 +269,6 @@ class Message(object):
 
         routing_key = method.routing_key
         json_body = body.decode('utf-8')
-
         return Message.load(json_body, routing_key, props_dict)
 
     @classmethod
@@ -392,6 +395,7 @@ class MsgReply(Message):
     """
     Auxiliary class which creates replies messages with fields based on the request.
     Routing key, corr_id are generated based on the request message
+    When not passing request_message as argument
     """
 
     def __init__(self, request_message=None, **kwargs):
@@ -418,10 +422,11 @@ class MsgReply(Message):
             self._properties["correlation_id"] = request_message.correlation_id
             self.correlation_id = request_message.correlation_id
 
-        else:  # note this doesnt generate amqp properties
+        else:  # note this doesnt copy amqp properties from original
             super(MsgReply, self).__init__(**kwargs)
-            logging.warning(
-                '[messages] lazy response built, generating reply message without properties for %s' % repr(self)[:70]
+            logger.info(
+                '[messages] lazy message reply generated. Do not expect correlation between request and reply amqp'
+                'properties  %s' % repr(self)[:70]
             )
 
     def correlate_to(self, request_message):
@@ -777,6 +782,28 @@ class MsgUiSessionConfigurationReply(MsgUiReply):
     routing_key = "ui.core.session.get.reply"
 
     _msg_data_template = {
+        "amqp_url": "amqp://WX9D3L5A:5S68CRDC@mq.dev.f-interop.eu:443/277704a1-03c0-467c-b00d-c984976692d7",
+        "logs": [
+            {
+                "date": "2018-05-07T12:50:47.224000+00:00",
+                "message": "Session created locally",
+                "type": "info"
+            },
+        ],
+        "resources": [
+            {}
+        ],
+        "shared": True,
+        "slice_id": "urn:publicid:IDN+finterop:project1+slice+testing",
+        "start_date": "2018-05-07T12:50:48.128000+00:00",
+        "status": "open",
+        "testSuite": "http://orchestrator.dev.f-interop.eu:8181/tests/f-interop/dummy-tool-shared",
+        "testSuiteType": "interoperability",
+        "users": [
+            "federico_sismondiojxu",
+            "myslice",
+            "federicosismondiparu"
+        ]
     }
 
 
@@ -795,13 +822,15 @@ class MsgUiRequestQuestionRadio(MsgUiRequest):
         "tags": {},
         "fields": [
             {
-                "name": "True",
+                "name": "some_info",
                 "type": "radio",
+                "label": "choice number 1",
                 "value": True
             },
             {
-                "name": "False",
+                "name": "some_info",
                 "type": "radio",
+                "label": "choice number 2",
                 "value": False
             },
         ]
@@ -861,6 +890,29 @@ class MsgUiRequestQuestionSelect(MsgUiRequest):
                     {"label": "choice 3", "value": 3},
                 ],
                 "value": 1
+            }
+        ]
+    }
+
+
+class MsgUiSendFileToDownload(MsgUiDisplay):
+    """
+    Requirements: ...
+
+    Type: Event
+
+    Pub/Sub: TT -> UI
+
+    Description: Message for file download on UI
+    """
+
+    _msg_data_template = {
+        "tags": {},
+        "fields": [
+            {
+                "name": "some_test_pcap_file.pcap",
+                "type": "data",
+                "value": None,  # base64_encoded
             }
         ]
     }
@@ -956,6 +1008,31 @@ class MsgUiDisplayMarkdownText(MsgUiDisplay):
     }
 
 
+class MsgUiDisplayIFrame(Message):
+    """
+    Requirements: ...
+
+    Type: Event
+
+    Pub/Sub: TT -> UI
+
+    Description: Message for displaying iframing GUI and external server
+    """
+
+    routing_key = "ui.user.all.display"
+
+    _msg_data_template = {
+        "level": None,
+        "tags": {},
+        "fields": [
+            {
+                "type": "iframe",
+                "name": "my_iframe",
+                "value": "https://www.w3schools.com"
+            },
+        ]
+    }
+
 # # # # # # AGENT MESSAGES # # # # # #
 
 
@@ -1035,9 +1112,9 @@ class MsgAgentSerialStart(Message):
     routing_key = "toAgent.*.802154.serial.start"
 
     _msg_data_template = {
-        "name": "tbd",
-        "port": "tbd",
-        "boudrate": "tbd",
+        "name": None,
+        "port": None,
+        "boudrate": None,
     }
 
 
@@ -1057,9 +1134,9 @@ class MsgAgentSerialStarted(Message):
     routing_key = "fromAgent.*.802154.serial.started"
 
     _msg_data_template = {
-        "name": "tbd",
-        "port": "tbd",
-        "boudrate": "tbd",
+        "name": None,
+        "port": None,
+        "boudrate": None,
     }
 
 
@@ -1113,7 +1190,7 @@ class MsgPacketSniffedRaw(Message):
 
 class MsgTestingToolTerminate(Message):
     """
-    Requirements: TT MUST listen to event, and handle a gracefully termination of all it's processes
+    Requirements: TT SHOULD listen to event, and handle a gracefully termination of all it's processes
 
     Type: Event
 
@@ -1130,7 +1207,7 @@ class MsgTestingToolTerminate(Message):
 
 class MsgTestingToolReady(Message):
     """
-    Requirements: TT MUST publish event as soon as TT is up and listening on the event bus
+    Requirements: TT SHOULD publish event as soon as TT is up and listening on the event bus
 
     Type: Event
 
@@ -1177,7 +1254,7 @@ class MsgSessionChat(Message):
 
     _msg_data_template = {
         "user_name": "Ringo",
-        "node": "tbd",
+        "node": "unknown",
         "description": "I've got blisters on my fingers!"
     }
 
@@ -1203,13 +1280,13 @@ class MsgSessionLog(Message):
 # TODO depricate this in favour of new UI call for getting the config
 class MsgSessionConfiguration(Message):
     """
-    Requirements: TT MUST listen to event, and configure accordingly
+    Requirements: TT SHOULD listen to event, and configure accordingly
 
     Type: Event
 
     Pub/Sub: Orchestrator -> Testing Tool
 
-    Description: TT MUST listen to this message and configure the testsuite correspondingly
+    Description: TT SHOULD listen to this message and configure the testsuite correspondingly
     """
     routing_key = "session.configuration"
 
@@ -1231,7 +1308,7 @@ class MsgSessionConfiguration(Message):
 
 class MsgTestingToolConfigured(Message):
     """
-    Requirements: TT MUST publish event once session.configuration message has been processed.
+    Requirements: TT SHOULD publish event once session.configuration message has been processed.
 
     Type: Event
 
@@ -1244,12 +1321,11 @@ class MsgTestingToolConfigured(Message):
 
     _msg_data_template = {
         "description": "Testing tool CONFIGURED",
-        "session_id": "TBD",
+        "session_id": None,
         "testing_tools": "f-interop/interoperability-coap",
     }
 
 
-# TODO deprecate this message
 class MsgSessionCreated(Message):
     """
     Requirements: Session Orchestrator MUST publish message on common-services channel (on every session creation)
@@ -1265,8 +1341,46 @@ class MsgSessionCreated(Message):
 
     _msg_data_template = {
         "description": "A new session has been created",
-        "session_id": "TBD",
-        "testing_tools": "TBD",
+        "session_id": None,
+        "testing_tools": None,
+    }
+
+
+class MsgAutomatedIutTestPing(Message):
+    """
+    Requirements: Automated IUTs SHOULD implement (other components should not subscribe to event)
+
+    Type: Event
+
+    Pub/Sub: Any Testing tool's component -> automated IUT
+
+    Description: tbd
+    """
+    routing_key = "testingtool.component.test.ping.request"
+
+    _msg_data_template = {
+        "description": "Automated IUT ping request",
+        "node": None,
+        "target_address": None
+    }
+
+
+class MsgAutomatedIutTestPingReply(MsgReply):
+    """
+    Requirements: Automated IUTs SHOULD implement (other components should not subscribe to event)
+
+    Type: Event
+
+    Pub/Sub: automated IUT -> any Testing tool's component
+
+    Description: tbd
+    """
+    routing_key = "testingtool.component.test.ping.reply"
+
+    _msg_data_template = {
+        "description": "Automated IUT reply to executed ping request",
+        "node": None,
+        "target_address": None
     }
 
 
@@ -1292,7 +1406,7 @@ class MsgTestingToolComponentShutdown(Message):
 
 class MsgTestSuiteStart(Message):
     """
-    Requirements: TT MUST listen to event and start the test suite right after reception. MsgTestSuiteStarted
+    Requirements: TT SHOULD listen to event and start the test suite right after reception. MsgTestSuiteStarted
 
     Type: Event
 
@@ -1328,7 +1442,7 @@ class MsgTestSuiteStarted(Message):
 
 class MsgTestSuiteFinish(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1346,7 +1460,7 @@ class MsgTestSuiteFinish(Message):
 
 class MsgTestCaseReady(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -1370,7 +1484,7 @@ class MsgTestCaseReady(Message):
 
 class MsgTestCaseStart(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1404,7 +1518,7 @@ class MsgTestCaseStarted(Message):
 
     _msg_data_template = {
         "description": "Test case STARTED",
-        "testcase_id": "TBD",
+        "testcase_id": None,
     }
 
 
@@ -1425,8 +1539,8 @@ class MsgTestCaseConfiguration(Message):
     _msg_data_template = {
         "configuration_id": "COAP_CFG_01",
         "node": "coap_server",
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD",
+        "testcase_id": None,
+        "testcase_ref": None,
         "description":
             ["CoAP servers running service at [bbbb::2]:5683",
              "CoAP servers are requested to offer the following resources",
@@ -1468,8 +1582,8 @@ class MsgConfigurationExecute(Message):
     _msg_data_template = {
         "configuration_id": "COAP_CFG_01",
         "node": "coap_server",
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD",
+        "testcase_id": None,
+        "testcase_ref": None,
         "description":
             ["CoAP servers running service at [bbbb::2]:5683",
              "CoAP servers are requested to offer the following resources",
@@ -1504,7 +1618,7 @@ class MsgConfigurationExecuted(Message):
 
     Description:
         - Message used for indicating that the IUT has been configured as requested
-        - pixit must be included in this message (pixit = Protocol Implementaiton eXtra Information for Testing)
+        - pixit SHOULD be included in this message (pixit = Protocol Implementaiton eXtra Information for Testing)
     """
 
     routing_key = "testsuite.testcase.configuration.executed"
@@ -1518,7 +1632,7 @@ class MsgConfigurationExecuted(Message):
 
 class MsgTestCaseStop(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1537,7 +1651,7 @@ class MsgTestCaseStop(Message):
 
 class MsgTestCaseRestart(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1555,7 +1669,7 @@ class MsgTestCaseRestart(Message):
 
 class MsgStepStimuliExecute(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -1580,15 +1694,15 @@ class MsgStepStimuliExecute(Message):
         "step_state": "executing",
         "node": "coap_client",
         "node_execution_mode": "user_assisted",
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD",
-        "target_address": "TBD"
+        "testcase_id": None,
+        "testcase_ref": None,
+        "target_address": None
     }
 
 
 class MsgStepStimuliExecuted(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1634,8 +1748,8 @@ class MsgStepCheckExecute(Message):
             "UTEST Uri-Path option test"
         ],
         "step_state": "executing",
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD"
+        "testcase_id": None,
+        "testcase_ref": None
     }
 
 
@@ -1664,7 +1778,7 @@ class MsgStepCheckExecuted(Message):
 
 class MsgStepVerifyExecute(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -1688,15 +1802,15 @@ class MsgStepVerifyExecute(Message):
         "node": "coap_client",
         "node_execution_mode": "user_assisted",
         "step_state": "executing",
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD"
+        "testcase_id": None,
+        "testcase_ref": None
 
     }
 
 
 class MsgStepVerifyExecuted(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1719,7 +1833,7 @@ class MsgStepVerifyExecuted(Message):
 
 class MsgTestCaseFinished(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -1734,14 +1848,14 @@ class MsgTestCaseFinished(Message):
 
     _msg_data_template = {
         "testcase_id": "TD_COAP_CORE_01",
-        "testcase_ref": "TBD",
+        "testcase_ref": None,
         "description": "Testcase finished"
     }
 
 
 class MsgTestCaseSkip(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1764,7 +1878,7 @@ class MsgTestCaseSkip(Message):
 
 class MsgTestCaseSelect(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1783,7 +1897,7 @@ class MsgTestCaseSelect(Message):
 
 class MsgTestSuiteAbort(Message):
     """
-    Requirements: TT MUST listen to event
+    Requirements: TT SHOULD listen to event
 
     Type: Event
 
@@ -1863,7 +1977,7 @@ class MsgTestSuiteGetStatusReply(MsgReply):
 
 class MsgTestSuiteGetTestCases(Message):
     """
-    Requirements: Testing Tool SHOULD (MUST?) implement (other components should not subscribe to event)
+    Requirements: Testing Tool SHOULD implement (other components should not subscribe to event)
 
     Type: Request (service)
 
@@ -1880,7 +1994,7 @@ class MsgTestSuiteGetTestCases(Message):
 
 class MsgTestSuiteGetTestCasesReply(MsgReply):
     """
-    Requirements: Testing Tool SHOULD (MUST?) implement (other components should not subscribe to event)
+    Requirements: Testing Tool SHOULD implement (other components should not subscribe to event)
 
     Type: Reply (service)
 
@@ -1918,7 +2032,7 @@ class MsgTestSuiteGetTestCasesReply(MsgReply):
 
 class MsgTestCaseVerdict(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -1953,7 +2067,7 @@ class MsgTestCaseVerdict(Message):
 
 class MsgTestSuiteReport(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -2159,6 +2273,23 @@ class MsgSniffingGetCaptureLastReply(MsgReply):
         "value": "1MOyoQIABAAAAAAAAAAAAMgAAAAAAAAA",  # empty PCAP
     }
 
+
+class MsgRoutingStartLossyLink(Message):
+    """
+    Requirements: Testing Tool SHOULD implement (other components should not subscribe to event)
+
+    Type: Reply (service)
+
+    Pub/Sub: sniffing -> coordination
+
+    Description: tbd
+    """
+    routing_key = "routing.lossy.link.start"
+
+    _msg_data_template = {
+        "number_of_packets_to_drop": 1,
+    }
+
     # # # # # # ANALYSIS MESSAGES # # # # # #
 
 
@@ -2178,6 +2309,10 @@ class MsgInteropTestCaseAnalyze(Message):
 
     PCAP_empty_base64 = "1MOyoQIABAAAAAAAAAAAAMgAAAAAAAAA"
 
+    PCAP_TC_COAP_01_base64 = '1MOyoQIABAAAAAAAAAAAAAAABAAAAAAAGfdPV8tZCAAtAAAALQAAAAIAAABFAAApcawAAEARAAB/AAABfwAAAdYxFj' \
+                             'MAFf4oQgGqAWLatHRlc3TBAhn3T1fHrAgAXgAAAF4AAAACAAAARQAAWlLmAABAEQAAfwAAAX8AAAEWM9YxAEb+WWJF' \
+                             'qgFi2sAhHpEC/1R5cGU6IDAgKENPTikKQ29kZTogMSAoR0VUKQpNSUQ6IDQzNTIxClRva2VuOiA2MmRh'
+
     routing_key = "analysis.interop.testcase.analyze.request"
 
     _msg_data_template = {
@@ -2186,7 +2321,7 @@ class MsgInteropTestCaseAnalyze(Message):
         "testcase_ref": "http://doc.f-interop.eu/tests/TD_COAP_CORE_01",
         "file_enc": "pcap_base64",
         "filename": "TD_COAP_CORE_01.pcap",
-        "value": PCAP_empty_base64,
+        "value": PCAP_TC_COAP_01_base64,
     }
 
 
@@ -2330,7 +2465,7 @@ class MsgDissectionDissectCaptureReply(MsgReply):
 
 class MsgDissectionAutoDissect(Message):
     """
-    Requirements: TT MUST publish event
+    Requirements: TT SHOULD publish event
 
     Type: Event
 
@@ -2352,8 +2487,8 @@ class MsgDissectionAutoDissect(Message):
         "token": "0lzzb_Bx30u8Gu-xkt1DFE1GmB4",
         "frames": _frames_example,
         "frames_simple_text": None,
-        "testcase_id": "TBD",
-        "testcase_ref": "TBD"
+        "testcase_id": None,
+        "testcase_ref": None
     }
 
     # # # # # # PRIVACY TESTING TOOL MESSAGES # # # # # #
@@ -2419,7 +2554,7 @@ class MsgPrivacyAnalyzeReply(MsgReply):
     _msg_data_template = {
         "ok": True,
         "verdict": _privacy_empty_report,
-        "testcase_id": "TBD",
+        "testcase_id": None,
     }
 
 
@@ -2501,7 +2636,7 @@ class MsgPrivacyGetStatusReply(MsgReply):
 
     _msg_data_template = {
         "verdict": REPORT_EXAMPLE,
-        "status": "TBD",
+        "status": None,
         "ok": True,
 
     }
@@ -2664,6 +2799,78 @@ class MsgVizInitReply(MsgReply):
     }
 
 
+# # # # # #   RESULTS STORE SERVICE MESSAGES   # # # # # #
+
+class MsgReportSaveRequest(Message):
+    routing_key = "results_store.session.report.save.request"
+
+    _msg_data_template = {
+        "type": "final",
+        "data": {}
+    }
+
+
+class MsgReportSaveReply(MsgReply):
+    routing_key = "results_store.session.report.save.reply"
+
+    _msg_data_template = {
+        "ok": True
+    }
+
+
+# # # # # #   RESULTS STORE MESSAGES   # # # # # #
+
+class MsgInsertResultRequest(Message):
+    routing_key = "results_store.insert_result.request"
+
+    _msg_data_template = {
+        "resources": [],
+        "owners": [],
+        "session_id": "",
+        "testing_tool_id": "",
+        "timestamp": 0,
+        "type": "",
+        "data": {}
+    }
+
+
+class MsgInsertResultReply(MsgReply):
+    routing_key = "results_store.insert_result.reply"
+
+    _msg_data_template = {
+        "ok": True
+    }
+
+
+class MsgGetResultRequest(Message):
+    routing_key = "results_store.get_result.request"
+
+    _msg_data_template = {}
+
+
+class MsgGetResultReply(MsgReply):
+    routing_key = "results_store.get_result.reply"
+
+    _msg_data_template = {
+        "ok": True,
+        "results": []
+    }
+
+
+class MsgDeleteResultRequest(Message):
+    routing_key = "results_store.delete_result.request"
+
+    _msg_data_template = {}
+
+
+class MsgDeleteResultReply(MsgReply):
+    routing_key = "results_store.delete_result.reply"
+
+    _msg_data_template = {
+        "ok": True
+    }
+
+
 # attention
 rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
     {
@@ -2699,6 +2906,7 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
         # ioppytest API: TT <-> Agents
         "fromAgent.*.ip.tun.packet.raw": MsgPacketSniffedRaw,  # Agent -> TestingTool
         "fromAgent.*.802154.serial.packet.raw": MsgPacketSniffedRaw,  # Agent -> TestingTool
+
         "toAgent.*.ip.tun.packet.raw": MsgPacketInjectRaw,  # TestingTool -> Agent
         "toAgent.*.802154.serial.packet.raw": MsgPacketInjectRaw,  # TestingTool -> Agent
         "toAgent.*.ip.tun.start": MsgAgentTunStart,  # TestingTool -> Agent
@@ -2712,6 +2920,9 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
         "testingtool.terminate": MsgTestingToolTerminate,  # GUI, orchestrator -> TestingTool
         "testingtool.component.ready": MsgTestingToolComponentReady,  # Testing Tool internal
         "testingtool.component.shutdown": MsgTestingToolComponentShutdown,  # Testing Tool internal
+        "testingtool.component.test.ping.request": MsgAutomatedIutTestPing,  # Testing Tool internal
+        "testingtool.component.test.ping.reply": MsgAutomatedIutTestPingReply,  # Testing Tool internal
+
 
         # ioppytest API: Test Suite messages (they all trigger interactions into GUI)
         "testsuite.start": MsgTestSuiteStart,  # GUI -> TestingTool
@@ -2759,7 +2970,7 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
         "sniffing.getcapture.reply": MsgSniffingGetCaptureReply,  # Testing Tool Internal
         "sniffing.getlastcapture.request": MsgSniffingGetCaptureLast,  # Testing Tool Internal
         "sniffing.getlastcapture.reply": MsgSniffingGetCaptureLastReply,  # Testing Tool Internal
-
+        "routing.lossy.link.start": MsgRoutingStartLossyLink,  # Testing Tool Internal
         "analysis.interop.testcase.analyze.request": MsgInteropTestCaseAnalyze,  # Testing Tool Internal
         "analysis.interop.testcase.analyze.reply": MsgInteropTestCaseAnalyzeReply,  # Testing Tool Internal
         "dissection.dissectcapture.request": MsgDissectionDissectCapture,  # Testing Tool Internal
@@ -2788,6 +2999,17 @@ rk_pattern_to_message_type_map = RoutingKeyToMessageMap(
         "viztool-grafana.set_dashboard.reply": MsgVizDashboardReply,
         "viztool-grafana.write_data": MsgVizWrite,
 
+        # results-store-service API
+        "results_store.session.report.save.request": MsgReportSaveRequest,  # TestingTool -> RSS
+        "results_store.session.report.save.reply": MsgReportSaveReply,  # RSS -> TestingTool (reply)
+
+        # results-store API
+        "results_store.insert_result.request": MsgInsertResultRequest,  # any on / vhost -> RS
+        "results_store.insert_result.reply": MsgInsertResultReply,  # RS -> any on / vhost (reply)
+        "results_store.get_result.request": MsgGetResultRequest,  # any on / vhost -> RS
+        "results_store.get_result.reply": MsgGetResultReply,  # RS -> any on / vhost (reply)
+        "results_store.delete_result.request": MsgDeleteResultRequest,  # any on / vhost -> RS
+        "results_store.delete_result.reply": MsgDeleteResultReply,  # RS -> any on / vhost (reply)
     }
 )
 

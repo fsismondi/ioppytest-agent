@@ -1,14 +1,13 @@
 # Authors:
-#     Federico Sismondi <federicosismondi@gmail.com>
+#     Federico Sismondi
 #     Remy Leone
 
 from __future__ import absolute_import
-
 from setuptools import setup, find_packages
 
 MAJOR = 0
 MINOR = 1
-PATCH = 10
+PATCH = 16
 VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
 
 name = 'ioppytest-agent'
@@ -41,7 +40,7 @@ setup(
     maintainer='Federico Sismondi',
     maintainer_email='federicosismondi@gmail.com',
     url='https://gitlab.f-interop.eu/f-interop-contributors/agent',
-    description='Component for setting up users environment for the tests',
+    description='Component for setting up users environment (mainly virtual network interfaces) for running tests',
     version=VERSION,
     license='GPLv3+',
     classifiers=CLASSIFIERS,
