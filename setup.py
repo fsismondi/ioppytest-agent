@@ -36,9 +36,9 @@ with open('README.md', 'r') as fh:
 setup(
     name=name,
     author='Federico Sismondi',
-    author_email='federicosismondi@gmail.com',
+    author_email='federicosismondi[at]gmail[dot]com',
     maintainer='Federico Sismondi',
-    maintainer_email='federicosismondi@gmail.com',
+    maintainer_email='federicosismondi[at]gmail[dot]com',
     url='https://gitlab.f-interop.eu/f-interop-contributors/agent',
     description='Component for setting up users environment (mainly virtual network interfaces) for running tests',
     version=VERSION,
