@@ -41,6 +41,7 @@ class TunConsumer(BaseConsumer):
 
         super(TunConsumer, self).__init__(user, password, session, server, exchange, name, consumer_name, subscriptions)
 
+        # creates and passes message to handler directly instead of waiting to receive it from event bus
         if force_bootstrap:
             self.handle_start(
                 messages.MsgAgentTunStart(
@@ -160,12 +161,13 @@ class TunConsumer(BaseConsumer):
 
         self.packet_count += 1
 
-        self.log.info("Message received from testing tool. Injecting in Tun. Message count (downlink): %s"
-                      % self.packet_count)
+        self.log.info("Message consumed from event bus. "
+                      "Injecting packet into tun interface. "
+                      "Packet count (downlink): %s"% self.packet_count)
 
         print(arrow_down)
         self.log.info('\n # # # # # # # # # # # # OPEN TUN # # # # # # # # # # # # ' +
-                      '\n data packet EventBus -> TUN interface' +
+                      '\n packet EventBus -> TUN interface' +
                       '\n' + message.to_json() +
                       '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # #'
                       )

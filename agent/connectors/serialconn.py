@@ -123,7 +123,7 @@ class SerialConsumer(BaseConsumer):
 
         print(arrow_down)
         log.info('\n # # # # # # # # # # # # SERIAL INTERFACE # # # # # # # # # # # # ' +
-                 '\n data packet EventBus -> Serial' +
+                 '\n packet EventBus -> Serial' +
                  '\n' + message.to_json() +
                  '\n # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # '
                  )
