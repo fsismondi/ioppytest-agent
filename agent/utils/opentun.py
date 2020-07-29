@@ -340,15 +340,22 @@ class OpenTunLinux(object):
             self.ipv6_host = self.ipv6_host.replace(":", "")
             v=[]
             #v.append(os.system('ifconfig tun0 inet 10.0.0.1 10.0.0.2 up'))
+
             v.append(os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root'))
             v.append(os.system('ip link set ' + self.ifname + ' up'))
             v.append(os.system('ip -6 addr add ' + self.ipv6_prefix + '::' + self.ipv6_host + '/64 dev ' + self.ifname))
             v.append(os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.ifname))
             v.append(os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname))
             v.append(os.system("ip route add " + self.ipv4_network + "/24 dev " + self.ifname))
-            v.append(os.system('echo 1 > /proc/sys/net/ipv4/ip_forward'))
+            #v.append(os.system('echo 1 > /proc/sys/net/ipv4/ip_forward'))
 
-            self.ipv4_dst
+            v.append(os.system('ifconfig {0} inet {1} netmask {2} broadcast {3}'.format(
+                self.ifname,
+                self.ipv4_host,
+                self.ipv4_netmask,
+                DEFAULT_IPV4_BROADCAST_ADDR
+            )))
+            v.append(os.system('route add -net 10 -interface {0}'.format(self.ifname)))
 
             log.info("Network configs : \n{}".format('\n'.join(str(i) for i in v)))
             #os.system('echo 1 > /proc/sys/net/ipv4/conf/{if_name}/forwarding'.format(if_name=self.ifname))
@@ -463,7 +470,8 @@ class OpenTunLinux(object):
 
         try:
             # write over tuntap interface
-            os.write(self.tunIf, data)
+            out = os.write(self.tunIf, data)
+            print("output:\n"+ str(out))
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("data dispatched to tun correctly, event: {0}, sender: {1}".format(signal, sender))
                 log.debug("writing in tunnel, data {0}".format(formatStringBuf(data)))

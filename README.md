@@ -1,5 +1,5 @@
-Agent for the f-interop platform (ioppytest-agent)
---------------------------------------------------
+Agent for ioppytest framework 
+-----------------------------
 
 About
 -----
