@@ -1,5 +1,31 @@
 ﻿# -*- coding: utf-8 -*-
 
+"""
+oficial doc on tuntap inferfaces
+
+https://www.kernel.org/doc/Documentation/networking/tuntap.txt
+
+
+from linux kernel doc:
+
+
+TUN/TAP provides packet reception and transmission for user space programs.
+It can be seen as a simple Point-to-Point or Ethernet device, which, instead of receiving packets from physical media,
+receives them from user space program and instead of sending packets via physical media writes them to the userspace
+program.
+
+How does Virtual network device actually work ?
+===============================================
+
+Virtual network device can be viewed as a simple Point-to-Point or Ethernet device, which instead of receiving packets
+from a physical media, receives them from user space program and instead of sending packets via physical media sends
+them to the user space program.
+
+Let’s say that you configured IPv6 on the tap0, then whenever the kernel sends an IPv6 packet to tap0, it is passed to
+the application (VTun for example). The application encrypts, compresses and sends it to the other side over TCP or UDP.
+The application on the other side decompresses and decrypts the data received and writes the packet to the TAP device,
+the kernel handles the packet like it came from real physical device.
+"""
 import json
 import logging
 import os
@@ -27,8 +53,8 @@ log = logging.getLogger(__name__)
 VIRTUALTUNID = [0x00, 0x00, 0x86, 0xdd]
 
 IFF_TUN = 0x0001
+IFF_NO_PI = 0x1000
 TUNSETIFF = 0x400454ca
-
 
 def buf2int(buf):
     """
@@ -173,9 +199,11 @@ class TunReadThread(threading.Thread):
                 # debug info
                 log.debug('packet captured on tun interface: {0}'.format(formatBuf(p)))
 
-                # remove tun ID octets
-                if self.tunTapHeader:
-                    p = p[4:]
+                # # ToDo clean this after proper testing
+                # # if IFF_NO_PI is on, then we dont have tuntap headers
+                # # remove tun ID octets
+                # if self.tunTapHeader:
+                #     p = p[4:]
 
                 # make sure it's an IPv4/6 packet (i.e., starts with 0x6x)
                 if (p[0] & 0xf0) != 0x60 and (p[0] & 0xf0) != 0x40:
@@ -328,39 +356,24 @@ class OpenTunLinux(object):
             # =====
             log.info("opening tun interface")
             returnVal = os.open("/dev/net/tun", os.O_RDWR)
-            ifs = ioctl(returnVal, TUNSETIFF, struct.pack("16sH", "tun%d", IFF_TUN))
+            ifs = ioctl(returnVal, TUNSETIFF, struct.pack("16sH", "tun%d", IFF_TUN | IFF_NO_PI))
             self.ifname = ifs[:16].strip("\x00")
 
             # =====
             log.info('configuring IPv4/6 address...')
-            # ipv6_prefixStr = formatIPv6Addr(self.ipv6_prefix)
-            # ipv6_hostStr = formatIPv6Addr(self.ipv6_host)
 
             # delete any : character in the host string (old API used to define those with that char)
             self.ipv6_host = self.ipv6_host.replace(":", "")
             v=[]
-            #v.append(os.system('ifconfig tun0 inet 10.0.0.1 10.0.0.2 up'))
-
-            v.append(os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root'))
+            #v.append(os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root'))
             v.append(os.system('ip link set ' + self.ifname + ' up'))
+            v.append(os.system('ip addr add dev tun0 {}/32'.format(self.ipv4_host)))
+            v.append(os.system('ip route add 10.2.0.0/24 dev {0}'.format(self.ifname)))
             v.append(os.system('ip -6 addr add ' + self.ipv6_prefix + '::' + self.ipv6_host + '/64 dev ' + self.ifname))
             v.append(os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.ifname))
-            v.append(os.system("ip addr add " + self.ipv4_host + "/24 dev " + self.ifname))
-            v.append(os.system("ip route add " + self.ipv4_network + "/24 dev " + self.ifname))
-            #v.append(os.system('echo 1 > /proc/sys/net/ipv4/ip_forward'))
-
-            v.append(os.system('ifconfig {0} inet {1} netmask {2} broadcast {3}'.format(
-                self.ifname,
-                self.ipv4_host,
-                self.ipv4_netmask,
-                DEFAULT_IPV4_BROADCAST_ADDR
-            )))
-            v.append(os.system('route add -net 10 -interface {0}'.format(self.ifname)))
 
             log.info("Network configs : \n{}".format('\n'.join(str(i) for i in v)))
-            #os.system('echo 1 > /proc/sys/net/ipv4/conf/{if_name}/forwarding'.format(if_name=self.ifname))
-            #'ip addr add dev tun0 10.8.0.2/24 broadcast 10.8.0.255'
-            #'ip route add {NETWORK/MASK} dev {DEVICE}'
+
             # =====
 
             # NOTE: touch as little as possible the OS kernel variables
@@ -398,7 +411,10 @@ class OpenTunLinux(object):
             log.info('-'*72)
             os.system('ip addr show ' + self.ifname)
             log.info('-' * 72)
-            log.info('\nupdate routing table:')
+            log.info('\n IPv4 update routing table:')
+            os.system('ip route show')
+            log.info('-' * 72)
+            log.info('\n IPv6 update routing table:')
             os.system('ip -6 route show')
             log.info('-' * 72)
             # =====
@@ -463,7 +479,7 @@ class OpenTunLinux(object):
             return
 
         # add tun header
-        data = VIRTUALTUNID + data
+        #data = VIRTUALTUNID + data
 
         # convert data to string
         data = ''.join([chr(b) for b in data])
