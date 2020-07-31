@@ -270,10 +270,13 @@ class OpenTunLinux(object):
         if ipv4_host is None: #fixMe
             if ipv6_host == ':1' or ipv6_host == '1':
                 ipv4_host = '10.2.0.1'
-                self.ipv4_dst='10.2.0.2'
-            else:
+                self.ipv4_dst='10.2.0.1'
+            elif  ipv6_host == ':2' or ipv6_host == '2':
                 ipv4_host = '10.2.0.2'
-                self.ipv4_dst = '10.2.0.1'
+                self.ipv4_dst = '10.2.0.2'
+            elif ipv6_host == ':3' or ipv6_host == '3':
+                ipv4_host = '10.2.0.3'
+                self.ipv4_dst = '10.2.0.3'
         self.ipv4_host = ipv4_host
 
 
@@ -371,6 +374,9 @@ class OpenTunLinux(object):
             v.append(os.system('ip route add 10.2.0.0/24 dev {0}'.format(self.ifname)))
             v.append(os.system('ip -6 addr add ' + self.ipv6_prefix + '::' + self.ipv6_host + '/64 dev ' + self.ifname))
             v.append(os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.ifname))
+
+            # amqp transport sends IP packet to everybody, hence we need to avoid everybody from doing redirects
+            v.append(os.system('echo 0 > /proc/sys/net/ipv4/conf/{if_name}/send_redirects'.format(if_name=self.ifname)))
 
             log.info("Network configs : \n{}".format('\n'.join(str(i) for i in v)))
 
