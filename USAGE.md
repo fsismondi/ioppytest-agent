@@ -236,59 +236,7 @@ INFO:agent.connectors.tun:
 
 
 
-### How does my implementation will reach other implementations?
 
-\n
-\n
-
-For running the tests both implementations need to be reachable, for this
-we will set up a IP tunnel (ipv6 only) between both implementations under test (IUT). 
-The software component for setting this up is called the agent, it plays a role similar to a VPN client.
-
-
-The following doc will describe how to install and launch the agent. This component will create a tun interface in your 
-PC which allows you to communicate with other implementations, the solution goes more or less like this:
-
-
-```
-       +--------------------------------+                                             +--------------------------------+
-       | +----------------------------+ |                                             | +----------------------------+ |
-       | |         IPv6-based         | |                                             | |         IPv6-based         | |
-       | |        communicating       | |                                             | |        communicating       | |
-       | |      piece of software     | |                                             | |      piece of software     | |
-       | |      (e.g. coap client)    | |   +----------------------------+            | |      (e.g. coap sever)     | |
-       | |                            | |   |                            |            | |                            | |
-       | +----------------------------+ |   |                            |            | +----------------------------+ |
-PC     |                                |   |       Packet Router        |      PC    |                                |
-user 1 | +------tun interface---------+ |   |                            |      user2 | +------tun interface---------+ |
-       |                                |   |                            |            |                                |
-       |            Agent               |   +----------------------------+            |            Agent               |
-       |                                |                                             |                                |
-       |          (tun mode)            |               ^    +                        |          (tun mode)            |
-       |                                |               |    |                        |                                |
-       |                                |               |    |                        |                                |
-       +--------------------------------+               |    |                        +--------------------------------+
-                                                        |    |
-                     +     ^                            |    |                                      ^     +
-                     |     |                        1,3 |    | 2,4                                  |     |
-                   1 |     | 2                          |    |                                    4 |     | 3
-                     |     |                            |    |                                      |     |
-                     v     +                            +    v                                      +     v
-
-     +----------------------------------------------------------------------------------------------------------------->
-                                                AMQP Event Bus
-     <-----------------------------------------------------------------------------------------------------------------+
-```
-
-\n\n\n\n
-
-AMQP Topics:
-1=fromAgent.agent_1_name.ip.tun.packet.raw
-2=toAgent.agent_1_name.ip.tun.packet.raw
-3=fromAgent.agent_2_name.ip.tun.packet.raw
-4=toAgent.agent_2_name.ip.tun.packet.raw
-
-------------------------------------------------------------------------------
 
 ### More about the agent component:
 

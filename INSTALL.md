@@ -1,13 +1,22 @@
-### Agent requirements
+Installation
+------------
 
-    - [OS requirement] agent component runs on MacOs (tested with MacOs 10.12.x) and debian-based distributions
-    - [OS requirement] for MacOs, `tuntap` driver is needed: `brew install Caskroom/cask/tuntap`
-    - [python version] python 2.7 needed (virtualenv use is recommended)
+### OS Requirements
+
+- [OS requirement] agent component runs on MacOs (tested with MacOs 10.12.x) and debian-based distributions
+- [OS requirement] for MacOs, `tuntap` driver is needed: `brew install Caskroom/cask/tuntap`
+- [python version] python 2.7 needed (virtualenv use is recommended)
 
 ---------------------------------------------------------------------------------
+
+(!) Agent runs only on python2
+
+---------------------------------------------------------------------------------
+
 (!) Windows is for the time being not supported by the agent. \n
 If your implementation can run into a virtual machine or docker container please\n
 setup that environment so yo can run the agent from within.\n
+
 ----------------------------------------------------------------------------------
 
 

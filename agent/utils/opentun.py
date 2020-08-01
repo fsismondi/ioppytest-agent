@@ -90,8 +90,13 @@ def formatBuf(buf):
 
 
 def formatIPv6Addr(addr):
+    """
+    >>> formatIPv6Addr([187, 187, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+    'bbbb:0:0:0:0:0:0:1'
+
+    """
     # group by 2 bytes
-    addr = [buf2int(addr[2 * i:2 * i + 2]) for i in range(len(addr) / 2)]
+    addr = [buf2int(addr[2 * i:2 * i + 2]) for i in range(int(len(addr) / 2))]
     return ':'.join(["%x" % b for b in addr])
 
 
