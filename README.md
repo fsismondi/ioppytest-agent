@@ -1,5 +1,5 @@
-Agent for the f-interop platform (ioppytest-agent)
---------------------------------------------------
+Agent for ioppytest framework 
+-----------------------------
 
 About
 -----
@@ -16,9 +16,14 @@ OS requirements
 
 This component has been tested with MacOs and Ubuntu (v15.04 or +).
 Windows OS (yet) are not supported.
+
 For Ubuntu 17.04 or +, you need to install iproute2:
 
 `apt-get -y -qq install iproute2`
+
+For MacOs (tested on 10.12):
+`brew install Caskroom/cask/tuntap`
+
 
 
 Installation

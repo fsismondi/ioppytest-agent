@@ -4,11 +4,7 @@
 
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-
-MAJOR = 0
-MINOR = 1
-PATCH = 17
-VERSION = '{}.{}.{}'.format(MAJOR, MINOR, PATCH)
+from agent import VERSION
 
 name = 'ioppytest-agent'
 
