@@ -25,14 +25,14 @@ Features of the agent
 """
 from __future__ import absolute_import
 
+import os
 import logging
 import click
 
 from .connectors import TunConnector
 from .connectors import CoreConnector
-from .connectors import SerialConnector
 
-from .utils import ioppytest_banner
+from .utils import ioppytest_banner, readme
 from .utils import packet_dumper
 
 try:
@@ -47,103 +47,43 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 logging.getLogger('amqp').setLevel(logging.INFO)
 
+default_ip_configs = {
+    'agent_1': ('bbbb', '1', '10.2.0.1'),
+    'agent_2': ('bbbb', '2', '10.2.0.2'),
+    'agent_3': ('bbbb', '3', '10.2.0.3'),
+    'agent_4': ('bbbb', '4', '10.2.0.4'),
+    'agent_5': ('bbbb', '5', '10.2.0.5'),
+    'agent_6': ('bbbb', '6', '10.2.0.6'),
+}
+
 
 class Agent(object):
     """
     Command line interface of the agent
     """
 
-    header = """
-Agent (~VPN client) is a component which connects the environment where 
-the IUT runs to testing tool using the AMQP bus. 
-This component is part of the ioppytest framework ecosystem. 
-This components needs to run in the user's host and must share some 
-kind on interface with the implementation under test (IUT), it will 
-enable the creation of a private network between all devices in the 
-session. 
-
-Some examples on the different modes of running the agent (depending on the cabling and networking of your IUT):
-
----------------------------------------------------------------------
-Note: We assume that a session was a already created and user has url
-and it has been exported as environment variable
-
-e.g.:
-export AMQP_URL=amqp://alfredo:zitarrosa@example.com[:port]/sessionXX 
----------------------------------------------------------------------
-
-1. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs (default mode):
-
-
-\b
-command:
-    sudo -E python -m agent connect \\
-        --url $AMQP_URL \\
-        --name coap_client
-
-expected result:
-
-agent is listening to event bus and now awaits bootstrap command
-
----------------------------------------------------------------------
-
-2. user runs an IPv6 based implementation (e.g. coap_client) which runs in same PC where agent runs, but wants to force 
-bootstrap ( virtual interface creation, and forced IP assignation)
-
-\b
-command:
-    sudo -E python -m agent connect \\ 
-        --url $AMQP_URL  \\
-        --name coap_client  \\
-        --force-bootstrap  \\
-        --ipv6-prefix bbbb  \\
-        --ipv6-host 100
+    header = """ 
     
-expected result:
-    agent is listening to event bus, bootstrapped, and has an assigned 
-    IPv6 (check interface with ifconfig)
-
 ---------------------------------------------------------------------
-3. user runs an IPv6 based implementation which is not hosted in the same PC where the agent runs, agent then 
-adds a network route with different prefix (e.g. cccc::/64) and notifies the backend about this configuration.   
-This can be used for example when the implementation under test is a device in a 6LoWPAN network.
+For discovering all agent features and please see:
 
-\b
-command:
-    sudo -E python -m agent connect \\ 
-        --url $AMQP_URL  \\
-        --name coap_client  \\
-        --force-bootstrap  \\
-        --ipv6-prefix bbbb  \\
-        --ipv6-host 1 \\
-        --re-route-packets-if eth0 \\
-        --re-route-packets-prefix cccc \\
-        --re-route-packets-host 1
-        
-    
-expected result:
-    agent is listening to event bus, bootstrapped, agent plays the role of a router, and hence forwards packets
-    from bbbb:: network to cccc:: network, devices in the cccc:: network should be able to ping6 devices in the
-    bbbb:: network and vice-versa.
+- general info: README.md
+- installing the agent: INSTALL.md
+- using the agent: USAGE.md
+- frequently asked questions: FAQ.md
+- license: LICENSE
 
----------------------------------------------------------------------
-continue writing this...
 
-TODO document --serial for 802.15.4 probes
-
-TODO document --router-mode for re-routing the packets to another interface
-
-\b
----------------------------------------------------------------------
-For exploring all "connect" command option type: python -m agent connect  --help
-For more information: README.md
 ---------------------------------------------------------------------
 
 """
 
+    default_AMQP_URL = 'amqp://guest:guest@localhost/'
+
     def __init__(self):
 
         print(ioppytest_banner)
+        print(readme)
 
         self.cli = click.Group(
             add_help_option=Agent.header,
@@ -152,9 +92,9 @@ For more information: README.md
 
         self.session_url = click.Option(
             param_decls=["--url"],
-            default="amqp://guest:guest@localhost/",
-            required=True,
-            help="AMQP url of the session")
+            default=None,
+            required=False,
+            help='url of the session, if None then uses AMQP_ENV env var or else {}'.format(self.default_AMQP_URL))
 
         self.session_amqp_exchange = click.Option(
             param_decls=["--exchange"],
@@ -176,50 +116,27 @@ For more information: README.md
 
         self.force_bootstrap = click.Option(
             param_decls=["--force-bootstrap"],
-            default=False,
+            default=True,
             required=False,
             help="Force agent's bootstrap",
             is_flag=True)
 
         self.ipv6_prefix = click.Option(
             param_decls=["--ipv6-prefix"],
-            default="bbbb",
+            default=None,
             required=False,
             help="Prefix of IPv6 address, used only if --force-bootstrap")
 
         self.ipv6_host = click.Option(
             param_decls=["--ipv6-host"],
-            default="1",
+            default=None,
             required=False,
             help="Host IPv6 address, used only if --force-bootstrap")
 
-        self.re_route_packets_prefix = click.Option(
-            param_decls=["--re-route-packets-prefix"],
-            default=None,
+        self.ipv4_address = click.Option(
+            param_decls=["--ipv4-address"],
             required=False,
-            help="Prefix of IPv6 address of the IUT living on a different network that agent's network, "
-                 "used only if --force-bootstrap")
-
-        self.re_route_packets_host = click.Option(
-            param_decls=["--re-route-packets-host"],
-            default=None,
-            required=False,
-            help="Host IPv6 address of the IUT living on a different network that agent's network, "
-                 "used only if --force-bootstrap")
-
-        self.re_route_packets_if = click.Option(
-            param_decls=["--re-route-packets-if"],
-            default=None,
-            required=False,
-            help="Network interface name of second were packets are routed to, "
-                 "used only if --force-bootstrap")
-
-        self.serial_option = click.Option(
-            param_decls=["--serial"],
-            default=False,
-            required=False,
-            help="Run agent bound to serial injector/forwarder of 802.15.4 frames",
-            is_flag=True)
+            help="IPv4 address, used only if --force-bootstrap")
 
         # Commands
 
@@ -234,10 +151,7 @@ For more information: README.md
                 self.force_bootstrap,
                 self.ipv6_host,
                 self.ipv6_prefix,
-                self.re_route_packets_prefix,
-                self.re_route_packets_host,
-                self.re_route_packets_if,
-                self.serial_option,
+                self.ipv4_address,
             ],
             short_help="Connect with authentication AMQP_URL, and some other basic agent configurations"
         )
@@ -246,22 +160,17 @@ For more information: README.md
 
         self.plugins = {}
 
-    def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix,
-                       serial, re_route_packets_prefix, re_route_packets_host, re_route_packets_if):
+    def handle_connect(self, url, exchange, name, dump, force_bootstrap, ipv6_host, ipv6_prefix, ipv4_address):
         """
         Authenticate USER and create agent connection to AMQP broker.
 
         """
 
-        # validate correct use of network for client and for server when using agent as a router mode
-        # TODO echo back to user diagram of expected network setup when using agent as a router features
-        if re_route_packets_prefix and re_route_packets_host and re_route_packets_if:
-            if 'client' in name and re_route_packets_prefix != 'aaaa':
-                raise Exception(
-                    'Client device under test network prefix must be aaaa::/64 when using agent as a router mode')
-            elif 'server' in name and re_route_packets_prefix != 'cccc':
-                raise Exception(
-                    'Server device under test network prefix must be cccc::/64 when using agent as a router mode')
+        # - - - Manage default config
+        if url is None:
+            url = os.getenv('AMQP_URL')
+        if url is None:
+            url = self.default_AMQP_URL
 
         p = urlparse(url)
         data = {
@@ -278,22 +187,22 @@ For more information: README.md
         if p.port:
             data.update({"server": "{}:{}".format(p.hostname, p.port)})
 
+        # all 3 ip params must be set, else we use default_ip_configs
+        if not (ipv6_prefix and ipv6_host and ipv4_address):
+            ipv6_prefix, ipv6_host, ipv4_address = default_ip_configs[name]
+
+        # - - - Setup plugins
         log.info("Try to connect with %s" % data)
 
         self.plugins["core"] = CoreConnector(**data)
 
-        if serial:
-            self.plugins["serial"] = SerialConnector(**data)
+        data['force_bootstrap'] = force_bootstrap
+        data['ipv6_host'] = ipv6_host
+        data['ipv6_prefix'] = ipv6_prefix
+        data['ipv4_address'] = ipv4_address
+        self.plugins["tun"] = TunConnector(**data)
 
-        else:
-            # pass some extra kwargs specific to the TunConnector
-            data['force_bootstrap'] = force_bootstrap
-            data['ipv6_host'] = ipv6_host
-            data['ipv6_prefix'] = ipv6_prefix
-            data['re_route_packets_prefix'] = re_route_packets_prefix
-            data['re_route_packets_host'] = re_route_packets_host
-            data['re_route_packets_if'] = re_route_packets_if
-            self.plugins["tun"] = TunConnector(**data)
+        # - - - Manage threads
 
         for p in self.plugins.values():
             p.start()

@@ -24,8 +24,7 @@ class TunConsumer(BaseConsumer):
     """
 
     def __init__(self, user, password, session, server, exchange, name, consumer_name,
-                 force_bootstrap, ipv6_host, ipv6_prefix,
-                 re_route_packets_prefix, re_route_packets_host, re_route_packets_if):
+                 force_bootstrap, ipv6_host, ipv6_prefix, ipv4_address):
 
         self.dispatcher = {
             messages.MsgAgentTunStart: self.handle_start,
@@ -48,13 +47,7 @@ class TunConsumer(BaseConsumer):
                     name=name,
                     ipv6_host=ipv6_host,
                     ipv6_prefix=ipv6_prefix,
-                    ipv6_no_forwarding=False if re_route_packets_prefix and re_route_packets_host else True,
-                    ipv4_host=None,
-                    ipv4_network=None,
-                    ipv4_netmask=None,
-                    re_route_packets_if=re_route_packets_if,
-                    re_route_packets_prefix=re_route_packets_prefix,
-                    re_route_packets_host=re_route_packets_host
+                    ipv4_address=ipv4_address
                 )
             )
 
@@ -105,13 +98,7 @@ class TunConsumer(BaseConsumer):
             try:
                 ipv6_host = msg.ipv6_host
                 ipv6_prefix = msg.ipv6_prefix
-                ipv6_no_forwarding = msg.ipv6_no_forwarding
-                ipv4_host = msg.ipv4_host
-                ipv4_network = msg.ipv4_network
-                ipv4_netmask = msg.ipv4_netmask
-                re_route_packets_if = msg.re_route_packets_if
-                re_route_packets_prefix = msg.re_route_packets_prefix
-                re_route_packets_host = msg.re_route_packets_host
+                ipv4_address = msg.ipv4_address
 
             except AttributeError as ae:
                 self.log.error(
@@ -125,13 +112,7 @@ class TunConsumer(BaseConsumer):
                 'name': self.name,
                 'ipv6_host': ipv6_host,
                 'ipv6_prefix': ipv6_prefix,
-                'ipv4_host': ipv4_host,
-                'ipv4_network': ipv4_network,
-                'ipv4_netmask': ipv4_netmask,
-                'ipv6_no_forwarding': ipv6_no_forwarding,
-                're_route_packets_if': re_route_packets_if,
-                're_route_packets_prefix': re_route_packets_prefix,
-                're_route_packets_host': re_route_packets_host
+                'ipv4_address': ipv4_address,
             }
 
             if sys.platform.startswith('win32'):
