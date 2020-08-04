@@ -3,74 +3,45 @@ Agent for ioppytest framework
 
 About
 -----
-Agent (~VPN client) is a component which connects the environment where
-the IUT runs to testing tool using the AMQP bus.
-This component is part of the ioppytest framework ecosystem.
-This components needs to run in the user's host and must share some
-kind on interface with the implementation under test (IUT), it will
-enable the creation of a private network between all devices in the
-session.
+Agent (~VPN client) is a component of the ioppytest framework ecosystem which creates tunnels between the IUTs,
+or between IUT and test system.
 
-OS requirements
----------------
-
-This component has been tested with MacOs and Ubuntu (v15.04 or +).
-Windows OS (yet) are not supported.
-
-For Ubuntu 17.04 or +, you need to install iproute2:
-
-`apt-get -y -qq install iproute2`
-
-For MacOs (tested on 10.12):
-`brew install Caskroom/cask/tuntap`
-
-
-
-Installation
-------------
-
-create virtual env for not messing up your current environment
+The following diagram described the resulting network connection between implementations:
 
 ```
-pip install virtualenv
-virtualenv -p /usr/bin/python2.7 my_venv
-source my_venv/bin/activate
++--------------------------------+                                             +--------------------------------+
+|  +--------------------------+  |                                             |  +--------------------------+  |
+|  |              |           |  |                                             |  |              |           |  |
+|  |     IUT      |   ping    |  |                                             |  |     IUT      |   ping    |  |
+|  |              |           |  |                                             |  |              |           |  |
+|  |              |           |  | PC 1                                  PC 2  |  |              |           |  |
+|  +--------------------------+  |                                             |  +--------------------------+  |
+|  |          tun0            |  |                                             |  |          tun0            |  |
+|  |                          |  |                                             |  |                          |  |
+|  |  virtual ip  10.2.0.1    |  |                                             |  |  virtual ip  10.2.0.2    |  |
+|  |  addresses:  bbbb::1     |  |                                             |  |  addresses:  bbbb::2     |  |
+|  |                          |  |                                             |  |                          |  |
+|  +--------------------------+  |                                             |  +--------------------------+  |
+|  |          agent_1         |  | +-----------------------------------------> |  |          agent_2         |  |
+|  |        (VPN client)      |  |         transport  (ip over foo)            |  |        (VPN client)      |  |
+|  +--------------------------+  | <-----------------------------------------+ |  +--------------------------+  |
++--------------------------------+                                             +--------------------------------+
+
 ```
 
-install ioppytest-agent using pip
+The agent components needs to run in the user's host. 
+It builds a virtual interface for enabling the communication, same way openVPN does.
+The previous diagram show a two IUT network build with the agent, but the network can support any number agents.
 
-```
-pip install ioppytest-agent
-```
-
-Design
-------
-An agent is made of different processes that connect to AMQP message
-broker and exchange messages (in and out) with other components using
-the same AMQP broker.
-
-Note well
-----
-Agent is only supported by python2 -> tun librarires py2 only
-
-Core
-----
-When started, the agent starts up the core module. This component is in
-charge of launching all the other components.
-If new components needs to be added they just need to be launched
-from this component.
 
 Error handling
 --------------
-When there is a user interrupt signal (Ctrl-C) the agent should kill
-all other components and disconnect as gracefully as possible.
+When there is a user interrupt signal (Ctrl-C) the agent should all running threads and should gracefully disconnect.
 
-IP tunneling mode (active-probe)
---------------------------------
-This mode can be used for communicating two IPv6-based implementations
-tunneling all traffic through AMQP messages.
 
-## Running the agent for IP tun
+Running the agent
+-----------------
+
 For running the agent you will need privileges on the machine, basically
 cause we need to open a virtual interface to tunnel the packets.
 
@@ -78,7 +49,7 @@ The command for executing it will be provided to you by the
 GUI or AMQP broker sys admin, it should look something like this:
 
 ```
-sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name coap_client
+sudo python -m agent connect  --url amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX --name agent_x
 ```
 
 for more info
@@ -89,180 +60,49 @@ python agent.py connect --help
 ```
 
 
-```
-                          +----------------+
-                          |                |
-                          |   AMQP broker  |
-                          |                |
-                          |                |
-                          +----------------+
+AMQP as IP packet transport 
+---------------------------
 
-
-                                ^     +
-                                |     |
-data.tun.fromAgent.agent_name   |     |  data.tun.toAgent.agent_name
-                                |     |
-                                +     v
-
-                 +---------------------------------+
-                 |                                 |
-                 |               Agent             |
-                 |                                 |
-                 |             (tun mode)          |
-                 |                                 |
-                 |                                 |
-                 |   +------tun interface--------+ |
-                 |                                 |
-                 |  +----------------------------+ |
-                 |  |         IPv6-based         | |
-                 |  |        communicating       | |
-                 |  |      piece of software     | |
-                 |  |      (e.g. coap client)    | |
-                 |  |                            | |
-                 |  +----------------------------+ |
-                 +---------------------------------+
+IP packets sent to the virtual interface will be encapsulated in AQMP messages and sent over the event bus.
+This messages are then forwarded to the corresponding agent.
+The routing between the agents is automagically hanlded by the packet router.
 
 ```
+    +--------------------------------+                                          +--------------------------------+
+    |  +--------------------------+  |                                          |  +--------------------------+  |
+    |  |              |           |  |                                          |  |              |           |  |
+    |  |    oneM2M    |  ping     |  |                                          |  |    oneM2M    |  ping     |  |
+    |  |     IUT      |           |  |                                          |  |     IUT      |           |  |
+    |  |              |           |  |  +----------------------------+          |  |              |           |  |
+    |  +--------------------------+  |  |                            |          |  +--------------------------+  |
+    |  |          tun0            |  |  |                            |          |  |          tun0            |  |
+    |  |                          |  |  |       Packet Router        |          |  |                          |  |
+    |  |  virtual ip  10.2.0.1    |  |  |    (forwards amqp messages)|          |  |  virtual ip  10.2.0.2    |  |
+    |  |  addresses:  bbbb::1     |  |  |                            |          |  |  addresses:  bbbb::2     |  |
+    |  |                          |  |  +----------------------------+          |  |                          |  |
+    |  +--------------------------+  |                                          |  +--------------------------+  |
+    |  |          agent_1         |  |              ^    +                      |  |          agent_2         |  |
+    |  |        (VPN client)      |  |              |    |                      |  |        (VPN client)      |  |
+    |  +--------------------------+  |              |    |                      |  +--------------------------+  |
+    +--------------------------------+              |    |                      +--------------------------------+
+                                                    |    |
+                 +     ^                            |    |                                      ^     +
+                 |     |                        1,3 |    | 2,4                                  |     |
+               1 |     | 2                          |    |                                    4 |     | 3
+                 |     |                            |    |                                      |     |
+                 v     +                            +    v                                      +     v
+
+ +----------------------------------------------------------------------------------------------------------------->
+                                            AMQP Event Bus
+ <-----------------------------------------------------------------------------------------------------------------+
 
 
-
-Serial mode (with 802.15.4 probe)
----------------------------------
-The following diagram describes how the agent the interfaces and
-interactions using serial mode (--serial option)
-
-TODO:
-add link to source code for probe
-
-**IMPORTANT**:
-This mode of functioning assumes the following IEEE802.15.4 settings:
-
-1. Channel, modulation, data-rate (Channels 11-26 at 2.4 GHz).
-2. MAC mode is beaconless.
-3. Security is off
-
-
-# Agent combined with active-probe
-----------------------------------
-This mode can be used for connecting two remote (geographically distant)
-802.15.4 based devices.
-
-Active mode probe automatically ACKs messages received by the user
-device, the 802.15.4 are not forwarded to the AMQP connection.
-
-## Running the agent (serial mode) w/ active-probe
-export AMQP connection variables, and USB params for the serial connection
-
-env vars:
-
-`
-export AMQP_EXCHANGE='amq.topic'
-export AMQP_URL="amqp://someUser:somePassword@f-interop.rennes.inria.fr/sessionXX"
-`
-
-check usb port, with for example with `ls /dev/tty*`
-
-`
-export FINTEROP_CONNECTOR_SERIAL_PORT=/dev/tty.XXX
-export FINTEROP_CONNECTOR_BAUDRATE=115200
-`
-
-then execute (e.g. for a coap_server running under the agent):
-
-`
-python -m agent connect  --url $AMQP_URL --name coap_server --serial
-`
+AMQP Topics:
+1=fromAgent.agent_1_name.ip.tun.packet.raw
+2=toAgent.agent_1_name.ip.tun.packet.raw
+3=fromAgent.agent_2_name.ip.tun.packet.raw
+4=toAgent.agent_2_name.ip.tun.packet.raw
 
 ```
 
-                           +----------------+
-                           |                |
-                           |   AMQP broker  |
-                           |                |
-                           |                |
-                           +----------------+
 
-
-                                 ^     +
-                                 |     |
-data.serial.fromAgent.agent_name |     | data.serial.toAgent.agent_name
-                                 |     |
-                                 +     v
-
-                           +----------------+
-                           |                |
-                           |                |
-                           |     Agent      |
-                           | (serial mode)  |
-                           |                |
-                           |                |
-                           +-------+--------+
-                                   | USB interface
-                                   | (SLIP protocol)
-                           +-------+--------+                        +---------------+
-                           |                |     802.15.4 frame     |               |
-                           |                |  <-----------------+   |   802.15.4    |
-                           |    probe mote  |                        |     user      |
-                           |  (active mode) |  +----------------->   |    device     |
-                           |                |                        |               |
-                           |                |                        |               |
-                           +----------------+                        +---------------+
-```
-
-
-
-# Agent combined with passive-probe
------------------------------------
-This mode can be used for forwarding all sniffed packet in a 802.15.4 network to AMQP broker
-and eventually other tools listening to the correct routing keys/topics.
-
-## Running the agent (serial mode) w/ passive-probe
-**TBD**
-
-```
-
-                        +----------------+
-                        |                |
-                        |   AMQP broker  |
-                        |                |
-                        |                |
-                        +----------------+
-
-                                 ^
-                                 |
-data.serial.fromAgent.agent_name |
-                                 |
-                                 +
-
-                         +----------------+
-                         |                |
-                         |                |
-                         |     Agent      |
-                         | (serial mode)  |
-                         |                |
-                         |                |
-                         +-------+--------+
-                                 | USB interface
-                                 | (SLIP protocol)
-                         +-------+--------+
-                         |                |
-                         |                |
-                         |    probe mote  |
-                         |  (passive mode)|
-                         |                |
-                         |                |
-                         +-------+--------+
-                                 |
-                                 |
-                                 |
-                                 |
-+---------------+                |              +---------------+
-|               |                |              |               |
-|   802.15.4    |       <--------+--------+     |   802.15.4    |
-|     user      |         802.15.4 frames       |     user      |
-|    device     |       +----------------->     |    device     |
-|               |                               |               |
-|               |                               |               |
-+---------------+                               +---------------+
-
-```

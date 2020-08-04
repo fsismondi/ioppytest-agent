@@ -26,9 +26,9 @@ the application (VTun for example). The application encrypts, compresses and sen
 The application on the other side decompresses and decrypts the data received and writes the packet to the TAP device,
 the kernel handles the packet like it came from real physical device.
 """
+import os
 import json
 import logging
-import os
 import struct
 import threading
 import time
@@ -36,12 +36,12 @@ import traceback
 from fcntl import ioctl
 import sys
 
-from kombu import Exchange
-
 from . import arrow_down, arrow_up
 from . import messages
 
 DEFAULT_IPV6_PREFIX = 'bbbb'
+DEFAULT_IPV4_NETWORK = '10.2.0.0'
+DEFAULT_IPV4_NETMASK = '255.255.255.0'
 DEFAULT_IPV4_BROADCAST_ADDR = '10.2.0.255'
 
 logging.basicConfig(level=logging.DEBUG)
@@ -55,6 +55,7 @@ VIRTUALTUNID = [0x00, 0x00, 0x86, 0xdd]
 IFF_TUN = 0x0001
 IFF_NO_PI = 0x1000
 TUNSETIFF = 0x400454ca
+
 
 def buf2int(buf):
     """
@@ -90,8 +91,13 @@ def formatBuf(buf):
 
 
 def formatIPv6Addr(addr):
+    """
+    >>> formatIPv6Addr([187, 187, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+    'bbbb:0:0:0:0:0:0:1'
+
+    """
     # group by 2 bytes
-    addr = [buf2int(addr[2 * i:2 * i + 2]) for i in range(len(addr) / 2)]
+    addr = [buf2int(addr[2 * i:2 * i + 2]) for i in range(int(len(addr) / 2))]
     return ':'.join(["%x" % b for b in addr])
 
 
@@ -218,7 +224,7 @@ class TunReadThread(threading.Thread):
 
                 # because of the nature of tun for Windows, p contains ETHERNET_MTU
                 # bytes. Cut at length of IPv6 packet.
-                #p = p[:self.IPv6_HEADER_LENGTH + 256 * p[4] + p[5]]
+                # p = p[:self.IPv6_HEADER_LENGTH + 256 * p[4] + p[5]]
 
                 # call the callback
                 self.callback(p)
@@ -241,11 +247,8 @@ class OpenTunLinux(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     """
 
-    def __init__(self, name, rmq_connection, rmq_exchange='amq.topic',
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
-                 re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
-                 ):
+    def __init__(self, name, rmq_connection, rmq_exchange='amq.topic', ipv6_prefix=None, ipv6_host=None,
+                 ipv4_address=None):
 
         # RMQ setups
         self.connection = rmq_connection
@@ -263,34 +266,12 @@ class OpenTunLinux(object):
             ipv6_host = ':1'
         self.ipv6_host = ipv6_host
 
-        if ipv6_no_forwarding is None:
-            ipv6_no_forwarding = False
-        self.ipv6_no_forwarding = ipv6_no_forwarding
+        if ipv4_address is None:
+            ipv4_address = '10.2.0.1'
+        self.ipv4_address = ipv4_address
 
-        if ipv4_host is None: #fixMe
-            if ipv6_host == ':1' or ipv6_host == '1':
-                ipv4_host = '10.2.0.1'
-                self.ipv4_dst='10.2.0.1'
-            elif  ipv6_host == ':2' or ipv6_host == '2':
-                ipv4_host = '10.2.0.2'
-                self.ipv4_dst = '10.2.0.2'
-            elif ipv6_host == ':3' or ipv6_host == '3':
-                ipv4_host = '10.2.0.3'
-                self.ipv4_dst = '10.2.0.3'
-        self.ipv4_host = ipv4_host
-
-
-        if ipv4_network is None:
-            ipv4_network = '10.2.0.0'
-        self.ipv4_network = ipv4_network
-
-        if ipv4_netmask is None:
-            ipv4_netmask = '255.255.0.0'
-        self.ipv4_netmask = ipv4_netmask
-
-        self.re_route_packets_if = re_route_packets_if
-        self.re_route_packets_prefix = re_route_packets_prefix
-        self.re_route_packets_host = re_route_packets_host
+        self.ipv4_network = DEFAULT_IPV4_NETWORK
+        self.ipv4_netmask = DEFAULT_IPV4_NETMASK
 
         log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
@@ -308,13 +289,9 @@ class OpenTunLinux(object):
         return {
             'ipv6_prefix': self.ipv6_prefix,
             'ipv6_host': self.ipv6_host,
-            'ipv6_no_forwarding': self.ipv6_no_forwarding,
-            'ipv4_host': self.ipv4_host,
+            'ipv4_address': self.ipv4_address,
             'ipv4_network': self.ipv4_network,
             'ipv4_netmask': self.ipv4_netmask,
-            're_route_packets_if': self.re_route_packets_if,
-            're_route_packets_prefix': self.re_route_packets_prefix,
-            're_route_packets_host': self.re_route_packets_host,
         }
 
     # def close(self):
@@ -341,7 +318,6 @@ class OpenTunLinux(object):
     #             except Exception as err:
     #                 log.error('Unable to send UDP to close tunReadThread: {0}'.join(err))
 
-
     # ======================== private =========================================
 
     def _getNetworkPrefix_notif(self, sender, signal, data):
@@ -367,54 +343,20 @@ class OpenTunLinux(object):
 
             # delete any : character in the host string (old API used to define those with that char)
             self.ipv6_host = self.ipv6_host.replace(":", "")
-            v=[]
-            #v.append(os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root'))
+            v = list()
+            # v.append(os.system('ip tuntap add dev ' + self.ifname + ' mode tun user root'))
             v.append(os.system('ip link set ' + self.ifname + ' up'))
-            v.append(os.system('ip addr add dev tun0 {}/32'.format(self.ipv4_host)))
-            v.append(os.system('ip route add 10.2.0.0/24 dev {0}'.format(self.ifname)))
+            v.append(os.system('ip addr add dev tun0 {}/24'.format(self.ipv4_address)))
+            v.append(os.system('ip route add {0}/24 dev {1}'.format(self.ipv4_address, self.ifname)))
             v.append(os.system('ip -6 addr add ' + self.ipv6_prefix + '::' + self.ipv6_host + '/64 dev ' + self.ifname))
             v.append(os.system('ip -6 addr add fe80::' + self.ipv6_host + '/64 dev ' + self.ifname))
 
-            # amqp transport sends IP packet to everybody, hence we need to avoid everybody from doing redirects
-            v.append(os.system('echo 0 > /proc/sys/net/ipv4/conf/{if_name}/send_redirects'.format(if_name=self.ifname)))
-
-            log.info("Network configs : \n{}".format('\n'.join(str(i) for i in v)))
+            log.info('Network configs error codes: {}'.format(v))
 
             # =====
 
-            # NOTE: touch as little as possible the OS kernel variables
-            if self.ipv6_no_forwarding:
-                log.info("disabling IPv6 forwarding...")
-                os.system('echo 0 > /proc/sys/net/ipv6/conf/{if_name}/forwarding'.format(if_name=self.ifname))
-            else:
-
-                log.info("adding static route route...")
-                # added 'metric 1' for router-compatibility constraint
-                # (show ping packet on wireshark but don't send to mote at all)
-
-                # TODO write predefined networking diagram
-                second_optional_wsn_network_prefix = 'cccc' if 'client' in self.name else 'aaaa'
-
-                static_routes = [
-                    'ip -6 route add ' + self.ipv6_prefix + ':1415:9200::/96 dev ' + self.ifname + ' metric 1',
-                    'ip -6 route add ' + second_optional_wsn_network_prefix + '::/64 dev ' + self.ifname + ' metric 1'
-                ]
-
-                if self.re_route_packets_host and self.re_route_packets_if and self.re_route_packets_prefix:
-                    static_routes.append(
-                        'ip -6 route add ' + self.re_route_packets_prefix + '::/64 dev ' + self.re_route_packets_if + ' metric 1'
-                    )
-
-                for route in static_routes:
-                    log.info("trying with:" + route)
-                    os.system(route)
-
-                log.info("enabling IPv6 forwarding...")
-                os.system('echo 1 > /proc/sys/net/ipv6/conf/{if_name}/forwarding'.format(if_name=self.ifname))
-
-            # =====
             log.info('\ncreated following virtual interface:')
-            log.info('-'*72)
+            log.info('-' * 72)
             os.system('ip addr show ' + self.ifname)
             log.info('-' * 72)
             log.info('\n IPv4 update routing table:')
@@ -484,16 +426,12 @@ class OpenTunLinux(object):
         if not self.tunIf:
             return
 
-        # add tun header
-        #data = VIRTUALTUNID + data
-
         # convert data to string
         data = ''.join([chr(b) for b in data])
 
         try:
             # write over tuntap interface
             out = os.write(self.tunIf, data)
-            print("output:\n"+ str(out))
             if log.isEnabledFor(logging.DEBUG):
                 log.debug("data dispatched to tun correctly, event: {0}, sender: {1}".format(signal, sender))
                 log.debug("writing in tunnel, data {0}".format(formatStringBuf(data)))
@@ -507,11 +445,8 @@ class OpenTunMACOS(object):
     Class which interfaces between a TUN virtual interface and an EventBus.
     '''
 
-    def __init__(self, name, rmq_connection, rmq_exchange='amq.topic',
-                 ipv6_prefix=None, ipv6_host=None, ipv6_no_forwarding=None,
-                 ipv4_host=None, ipv4_network=None, ipv4_netmask=None,
-                 re_route_packets_if=None, re_route_packets_prefix=None, re_route_packets_host=None
-                 ):
+    def __init__(self, name, rmq_connection, rmq_exchange='amq.topic', ipv6_prefix=None, ipv6_host=None,
+                 ipv4_address=None):
 
         # RMQ setups
         self.connection = rmq_connection
@@ -532,30 +467,12 @@ class OpenTunMACOS(object):
             ipv6_host = '1'
         self.ipv6_host = ipv6_host
 
-        if ipv6_no_forwarding is None:
-            ipv6_no_forwarding = False
-        self.ipv6_no_forwarding = ipv6_no_forwarding
+        if ipv4_address is None:
+            ipv4_address = '10.2.0.1'
+        self.ipv4_address = ipv4_address
 
-
-        if ipv4_host is None: #fixMe
-            if ipv6_host == ':1' or ipv6_host == '1':
-                ipv4_host = '10.2.0.1'
-            else:
-                ipv4_host = '10.2.0.2'
-
-        self.ipv4_host = ipv4_host
-
-        if ipv4_network is None:
-            ipv4_network = '10.2.0.0'
-        self.ipv4_network = ipv4_network
-
-        if ipv4_netmask is None:
-            ipv4_netmask = '255.255.0.0'
-        self.ipv4_netmask = ipv4_netmask
-
-        self.re_route_packets_if = re_route_packets_if
-        self.re_route_packets_prefix = re_route_packets_prefix
-        self.re_route_packets_host = re_route_packets_host
+        self.ipv4_network = DEFAULT_IPV4_NETWORK
+        self.ipv4_netmask = DEFAULT_IPV4_NETMASK
 
         log.debug("IP info: \n {}".format(self.get_tun_configuration()))
 
@@ -573,13 +490,9 @@ class OpenTunMACOS(object):
         return {
             'ipv6_prefix': self.ipv6_prefix,
             'ipv6_host': self.ipv6_host,
-            'ipv6_no_forwarding': self.ipv6_no_forwarding,
-            'ipv4_host': self.ipv4_host,
+            'ipv4_address': self.ipv4_address,
             'ipv4_network': self.ipv4_network,
             'ipv4_netmask': self.ipv4_netmask,
-            're_route_packets_if': self.re_route_packets_if,
-            're_route_packets_prefix': self.re_route_packets_prefix,
-            're_route_packets_host': self.re_route_packets_host,
         }
 
     # ======================== private =========================================
@@ -606,7 +519,6 @@ class OpenTunMACOS(object):
         tun_counter = 0
         while tun_counter < 16:
             try:
-                import os
                 self.ifname = 'tun{0}'.format(tun_counter)
                 f = os.open("/dev/{0}".format(self.ifname), os.O_RDWR)
                 break
@@ -621,77 +533,34 @@ class OpenTunMACOS(object):
 
             # =====
             log.info('configuring tun IPv4/6 address...')
-            # prefixStr = u.formatIPv6Addr(openTun.IPV6PREFIX)
-            # hostStr   = u.formatIPv6Addr(openTun.IPV6HOST)
-
-            # v=os.system('ifconfig {0} inet6 {1}:{2} prefixlen 64'.format(self.ifname, self.prefixStr, hostStr))
-            # v=os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, hostStr))
 
             # delete starting ":"
             self.ipv6_host = self.ipv6_host.replace(":", "")
 
-            v = os.system('ifconfig {0} inet6 {1}::{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host))
-            v = os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host))
+            v = list()
+            v.append(os.system(
+                'ifconfig {0} inet6 {1}::{2} prefixlen 64'.format(self.ifname, self.ipv6_prefix, self.ipv6_host)))
+            v.append(os.system('ifconfig {0} inet6 fe80::{1} prefixlen 64 add'.format(self.ifname, self.ipv6_host)))
 
-            v = os.system('ifconfig {0} inet {1} netmask {2} broadcast {3}'.format(
+            v.append(os.system('ifconfig {0} inet {1} netmask {2} broadcast {3}'.format(
                 self.ifname,
-                self.ipv4_host,
+                self.ipv4_address,
                 self.ipv4_netmask,
                 DEFAULT_IPV4_BROADCAST_ADDR
-            ))
-            v = os.system('route add -net 10 -interface {0}'.format(self.ifname))
+            )))
+            v.append(os.system('route -n add {0}/24 -interface {1}'.format(self.ipv4_address, self.ifname)))
 
-            # =====
-            # NOTE: touch as little as possible the OS kernel variables
-            if self.ipv6_no_forwarding:
-                pass
-                # log.info("disabling IPv6 forwarding...")
-                # os.system('sysctl -w net.inet6.ip6.forwarding=0')
-            else:
-
-                log.info("adding static route route...")
-                # added 'metric 1' for router-compatibility constraint
-                # (show ping packet on wireshark but don't send to mote at all)
-
-                # TODO write predefined networking diagram
-                second_optional_wsn_network_prefix = 'cccc' if 'client' in self.name else 'aaaa'
-
-                static_routes = [
-                    'route add -inet6 {0}:1415:9200::/96 -interface {1}'.format(self.ipv6_prefix, self.ifname),
-                    'route add -inet6 {0}::/64 -interface {1}'.format(second_optional_wsn_network_prefix, self.ifname)
-                ]
-
-                if self.re_route_packets_host and self.re_route_packets_if and self.re_route_packets_prefix:
-                    static_routes.append(
-                        'route add -inet6 {0}::/64 -interface {1}'.format(self.re_route_packets_prefix,
-                                                                          self.re_route_packets_if)
-                    )
-
-                for route in static_routes:
-                    log.info("trying with:" + route)
-                    os.system(route)
-
-                # trying to set a gateway for this route
-                # os.system('ip -6 route add ' + prefixStr + '::/64 via ' + IPv6Prefix + ':' + hostStr + '/64')
-
-                log.info("enabling IPv6 forwarding...")
-                os.system('sysctl -w net.inet6.ip6.forwarding=1')
-                log.info("enabling IPv4 forwarding...")
-                os.system('sysctl -w net.ipv4.ip_forward=1')
-
+            log.info('Network configs error codes: {}'.format(v))
 
             # =====
             log.info('\ncreated following virtual interface:')
-            print('-'*72)
+            print('-' * 72)
             os.system('ifconfig {0}'.format(self.ifname))
             print('-' * 72)
             log.info('\nupdate routing table:')
             os.system('netstat -nr')
             print('-' * 72)
             # =====
-
-            # =====start radvd
-            # os.system('radvd start')
 
             return f
 
@@ -776,6 +645,5 @@ class OpenTunMACOS(object):
         except Exception as err:
             errMsg = formatCriticalMessage(err)
             log.critical(errMsg)
-
 
             # ======================== helpers =========================================

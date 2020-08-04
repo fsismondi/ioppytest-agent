@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from . import messages
 from . import packet_dumper
-from . import serial_listener
 
 import logging
 import os
@@ -59,18 +58,10 @@ arrow_down = """
      Y   _/  _\\
 """
 
-
-finterop_banner = \
-    """
-      ______    _____       _                       
-     |  ____|  |_   _|     | |                      
-     | |__ ______| |  _ __ | |_ ___ _ __ ___  _ __  
-     |  __|______| | | '_ \\| __/ _ \\ '__/ _ \\| '_ \\ 
-     | |        _| |_| | | | ||  __/ | | (_) | |_) |
-     |_|       |_____|_| |_|\\__\\___|_|  \\___/| .__/ 
-                                             | |    
-                                             |_|    
-    """
+readme=\
+"""
+{}
+""".format("".join(open('README.md').readlines()))
 
 ioppytest_banner=\
 """
@@ -82,3 +73,4 @@ ioppytest_banner=\
            |_|    |_|     |___/                                   |___/
                       
 """
+
