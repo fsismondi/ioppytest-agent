@@ -1,25 +1,25 @@
-### Running the agent (IP tunnel)
+# Running the agent (IP tunnel)
 
-### Environment:
+## Environment:
 
-The agents requires as env var a URL used for creating the connection to the `iopppytest` backend.
-The backend receives (maybe) processes and routes the packet to the other end of the tunnel.
+The agents requires the AMQP_URL param for creating connection to the backend.
+The backend receives, processes and routes the packet to the other end of the tunnel.
  
 ```
 export AMQP_URL=<AMQP_URL>
 ```
 
-Host 1 (bbbb::1):
+Host 1:
 
-`sudo -E python2.7 -m agent connect --url $AMQP_URL --name AgentNameHost1 --force-bootstrap --ipv6-host 1 --ipv6-prefix bbbb`
-
-
-Host 2 (bbbb::2):
-
-`sudo -E python2.7 -m agent connect --url $AMQP_URL --name AgentNameHost2 --force-bootstrap --ipv6-host 2 --ipv6-prefix bbbb`
+`sudo -E python2.7 -m agent connect --url $AMQP_URL --name agent_1
 
 
-If your implementation doesnt run as software hosted directly in the OS (e.g. the implementation is an IoT device in a 
+Host 2:
+
+`sudo -E python2.7 -m agent connect --url $AMQP_URL --name agent_2
+
+
+If your implementation doesnt run as software hosted in the OS (e.g. embedded device running in a 
 WSN network) please check out the agent help section describing these setups 
 
 
@@ -32,7 +32,7 @@ Get help with:
 If everything goes well you should see in your terminal sth like this:
 
 ```
-➜  /tmp sudo -E python -m agent connect --url $AMQP_URL --name coap_server --force-bootstrap --ipv6-host 2 --ipv6-prefix bbbb
+➜  sudo -E python -m agent ...
 Password:
 
   _                              _              _                                     _
@@ -121,11 +121,20 @@ INFO:agent.utils.opentun:
 
 ## Testing: How can I test if the tunnel works?
 
-(now the agent should be boostrapped, and the network interfaces ready to go..)
+addressing of endpoints present in a session is:
 
+```
+# agent_name , ipv6, ipv4
+'agent_1': ('bbbb:1', '10.2.0.1'),
+'agent_2': ('bbbb:2', '10.2.0.2'),
+'agent_3': ('bbbb:3', '10.2.0.3'),
+'agent_4': ('bbbb:4', '10.2.0.4'),
+'agent_5': ('bbbb:5', '10.2.0.5'),
+'agent_6': ('bbbb:6', '10.2.0.6'),
+...
+```
 
 ### Test1 : check the tun interface was created 
-
 
 ```
 >>> fsismondi@carbonero:~$ ifconfig
@@ -141,10 +150,7 @@ tun0: flags=8851<UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST> mtu 1500
 
 ### Test2 : ping the other device 
 
-
 Pinging the other host on the other end:
-
-(the destination IPv6 is either bbbb::1 or bbbb::2)
 
 ```
 fsismondi@carbonero:~$ ping6 bbbb::2
@@ -161,16 +167,11 @@ round-trip min/avg/max/std-dev = 63.770/66.528/69.990/2.588 ms
 ```
 
 
-(!) Note: this requires the other agent on the other end was bootstrapped successfully
-----------------------------------------------------------------------------
+(!) Note: if no other agent listening on the other end then nothing will ping back, duh!
 
-----------------------------------------------------------------------------
 
-\n\n
+in terminal where the agent runs you should see upstream and downstream packets log messages:
 
-while in the terminal where the agent runs you should see upstream and downstream packets log messages:
-
-\n\n
 
 ```
 INFO:agent.connectors.tun:Message received from testing tool. Injecting in Tun. Message count (downlink): 1
@@ -204,9 +205,7 @@ INFO:agent.utils.opentun:
  # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 ```
 
-\n\n
 ----------------------------------------------------------------------------
-\n\n
 
 ```
 INFO:agent.connectors.tun:Message received from testing tool. Injecting in Tun. Message count (downlink): 1
@@ -234,10 +233,17 @@ INFO:agent.connectors.tun:
  # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 ```
 
+## Stopping the agent
+
+No safe way is still in place for stopping the agent more than with SINGAL TERMINATION 
+
+```
+ctl+c , sometimes ctr + \ is required)
+```
+
+Embarrassing, I know.. 
 
 
-
-
-### More about the agent component:
+## More about the agent component:
 
 [link to agent README](https://github.com/fsismondi/ioppytest-agent/blob/master/README.md)
