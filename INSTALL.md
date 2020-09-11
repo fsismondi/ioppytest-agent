@@ -5,12 +5,13 @@ Installation
 
 - [OS requirement] agent component runs on MacOs (tested with MacOs 10.12.x) and debian-based distributions
 - [OS requirement] for MacOs, `tuntap` driver is needed: `brew install Caskroom/cask/tuntap`
+- [OS requirement] for debian-like OS (e.g. ubuntu) `ip` package is needed: `apt install -y iproute2`
 - [python version] python 2.7 needed (virtualenv use is recommended)
 
 (!) Agent runs only on python2
 (!) Windows is for the time being not supported by the agent.
 
-If your implementation can run into a debian-like os but you don't own one, please use a virtual machine 
+If your implementation can run into a debian-like machine but you don't own one, please use a virtual machine 
 or run it from within a docker container.
 
 # Installing the agent:

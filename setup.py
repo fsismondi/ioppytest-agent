@@ -4,7 +4,7 @@
 
 from __future__ import absolute_import
 from setuptools import setup, find_packages
-from agent import VERSION
+from version import __version__
 
 name = 'ioppytest-agent'
 
@@ -23,9 +23,6 @@ CLASSIFIERS = [
     'Operating System :: MacOS'
 ]
 
-with open('version.py', 'w') as f:
-    f.write('__version__ = "{version}"\n'.format(version=VERSION))
-
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
@@ -37,7 +34,7 @@ setup(
     maintainer_email='federicosismondi@gmail.com',
     url='https://github.com/fsismondi/ioppytest-agent',
     description='Component for creating VPN client environments',
-    version=VERSION,
+    version=__version__,
     license='GPLv3+',
     classifiers=CLASSIFIERS,
     packages=find_packages(exclude=['tests']),
@@ -50,5 +47,6 @@ setup(
         'pika',
         'pyserial',
     ],
+    data_files=[("", ["README.md", "USAGE.md", "FAQ.md", "INSTALL.md", "LICENSE", "version.py"])],
     entry_points={'console_scripts': ['ioppytest-agent=agent.agent_cli:main']},
 )

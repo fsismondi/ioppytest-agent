@@ -32,7 +32,7 @@ import click
 from .connectors import TunConnector
 from .connectors import CoreConnector
 
-from .utils import ioppytest_banner, readme
+from .utils import ioppytest_banner
 from .utils import packet_dumper
 
 try:
@@ -65,14 +65,20 @@ class Agent(object):
     header = """ 
     
 ---------------------------------------------------------------------
+
 For discovering all agent features and please see:
 
 - general info: README.md
+
 - installing the agent: INSTALL.md
+
 - using the agent: USAGE.md
+
 - frequently asked questions: FAQ.md
+
 - license: LICENSE
 
+at https://github.com/fsismondi/ioppytest-agent
 
 ---------------------------------------------------------------------
 
@@ -83,7 +89,6 @@ For discovering all agent features and please see:
     def __init__(self):
 
         print(ioppytest_banner)
-        print(readme)
 
         self.cli = click.Group(
             add_help_option=Agent.header,
